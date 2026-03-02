@@ -1,0 +1,103 @@
+<html>
+<head>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+
+  .form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+  }
+
+  h2 {
+    margin-top: 0;
+    color: #333;
+    text-align: center;
+    font-size: 24px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box; /* สำคัญ: เพื่อให้ padding ไม่ทำให้ input เลยขอบ */
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  input[type="text"]:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.2);
+  }
+
+  input[type="submit"] {
+    width: 100%;
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+
+  input[type="submit"]:hover {
+    background-color: #45a049;
+  }
+</style>
+</head>
+<body>
+
+<div class="form-container">
+  <h2>บันทึกข้อมูลพนักงาน</h2>
+
+  <form action="/action_page.php">
+    <label for="fname">Full name</label>
+    <input type="text" id="fname" name="fname" placeholder="Enter your full name">
+
+    <label for="email">E-mail</label>
+    <input type="text" id="email" name="email" placeholder="example@mail.com">
+
+
+    <label for="Postion">Position</label>
+    <select id="Postion" name="Postion" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; background-color: white; outline: none; appearance: none; -webkit-appearance: none;">
+    <option value="" disabled selected>Select your position</option>
+    <option value="Manager">Manager</option>
+    <option value="Developer">Developer</option>
+    <option value="Designer">Designer</option>
+    <option value="Marketing">Marketing</option>
+    </select>
+
+
+    <label for="PhoneNo">Phone No.</label>
+    <input type="text" id="PhoneNo" name="PhoneNo" placeholder="08x-xxx-xxxx">
+
+    <input type="submit" value="Submit">
+  </form> 
+</div>
+
+</body>
+</html>
