@@ -1,0 +1,213 @@
+ {% extends "base.html" %}
+ {% block title %}
+
+ <title>Form</title>
+
+ {% endblock %}
+ {% block content %}
+
+ 
+<style>
+    body {
+        background-color: #f4f7f6; /* สีพื้นหลังอ่อนๆ ให้ฟอร์มดูเด่น */
+        font-family: 'Kanit', sans-serif; /* แนะนำให้ใช้ Font Kanit จะสวยมาก */
+    }
+
+    .form-container {
+        max-width: 500px;
+        margin: 50px auto;
+        background: #ffffff;
+        padding: 40px;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05); /* เงาแบบฟุ้งๆ */
+    }
+
+    .form-container h2 {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 30px;
+        text-align: center;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 15px;
+    }
+
+    label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    input[type="text"], 
+    select {
+        width: 100%;
+        padding: 12px 15px;
+        margin-bottom: 20px;
+        border: 1px solid #e1e1e1;
+        border-radius: 8px;
+        box-sizing: border-box;
+        transition: all 0.3s ease; /* เวลาคลิกจะดูสมูท */
+        outline: none;
+    }
+
+    /* เอฟเฟกต์ตอนเอาเมาส์ไปคลิกที่ช่องกรอก */
+    input[type="text"]:focus, 
+    select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+    }
+
+    input[type="submit"] {
+        width: 100%;
+        background-color: #0d6efd; /* สีน้ำเงิน Bootstrap */
+        color: white;
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+
+    input[type="submit"]:hover {
+        background-color: #0b5ed7; /* เข้มขึ้นเมื่อเอาเมาส์วาง */
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);
+    }
+</style>
+
+<div class="form-container">
+    <h2>บันทึกข้อมูลพนักงาน</h2>
+
+    <form action="">
+        <label for="fname">Full Name</label>
+        <input type="text" id="fname" name="fname" placeholder="ชื่อ-นามสกุล">
+
+        <label for="email">E-mail</label>
+        <input type="text" id="email" name="email" placeholder="example@mail.com">
+
+        <label for="Postion">Position</label>
+        <select id="Postion" name="Postion">
+            <option value="" disabled selected>เลือกตำแหน่งงาน</option>
+            <option value="Manager">Manager</option>
+            <option value="Developer">Developer</option>
+            <option value="Designer">Designer</option>
+            <option value="Marketing">Marketing</option>
+        </select>
+
+        <label for="PhoneNo">Phone No.</label>
+        <input type="text" id="PhoneNo" name="PhoneNo" placeholder="08x-xxx-xxxx">
+
+<button type="submit" class="btn btn-success w-100 p-2 shadow-sm" style="border-radius: 8px; font-weight: 600;">
+    บันทึกข้อมูล
+</button>
+    </form> 
+</div>
+    
+{% endblock %}
+
+
+
+<!-- <html>
+<head>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7f6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+
+  .form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+  }
+
+  h2 {
+    margin-top: 0;
+    color: #333;
+    text-align: center;
+    font-size: 24px;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box; /* สำคัญ: เพื่อให้ padding ไม่ทำให้ input เลยขอบ */
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  input[type="text"]:focus {
+    border-color: #4CAF50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.2);
+  }
+
+  input[type="submit"] {
+    width: 100%;
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+
+  input[type="submit"]:hover {
+    background-color: #45a049;
+  }
+</style>
+</head>
+<body>
+
+<div class="form-container">
+  <h2>บันทึกข้อมูลพนักงาน</h2>
+
+  <form action="/action_page.php">
+    <label for="fname">Full name</label>
+    <input type="text" id="fname" name="fname" placeholder="Enter your full name">
+
+    <label for="email">E-mail</label>
+    <input type="text" id="email" name="email" placeholder="example@mail.com">
+
+
+    <label for="Postion">Position</label>
+    <select id="Postion" name="Postion" style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; background-color: white; outline: none; appearance: none; -webkit-appearance: none;">
+    <option value="" disabled selected>Select your position</option>
+    <option value="Manager">Manager</option>
+    <option value="Developer">Developer</option>
+    <option value="Designer">Designer</option>
+    <option value="Marketing">Marketing</option>
+    </select>
+
+
+    <label for="PhoneNo">Phone No.</label>
+    <input type="text" id="PhoneNo" name="PhoneNo" placeholder="08x-xxx-xxxx">
+
+    <input type="submit" value="Submit">
+  </form> 
+</div>
+
+</body>
+</html> -->

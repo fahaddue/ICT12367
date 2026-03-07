@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>หน้าแรกของเว็บไซด์ - แนะนำพันธุ์แมว</title>
+{% endblock %}
+
+{% block content %}
+
+<style>
+    /* ปรับขนาดและสไตล์ของ Banner (Carousel) */
+    .cat-banner .carousel-item {
+        height: 450px; /* ปรับความสูงของแบนเนอร์ตามต้องการ */
+    }
+    .cat-banner .carousel-item img {
+        height: 100%;
+        object-fit: cover; /* ให้รูปเต็มและไม่เบี้ยว */
+        filter: brightness(70%); /* ลดความสว่างรูปเพื่อให้ข้อความเด่นขึ้น */
+    }
+    .cat-banner .carousel-caption {
+        bottom: 20%; /* ขยับข้อความขึ้นด้านบนนิดหน่อย */
+    }
+    /* ปรับขนาดรูปใน Card แมวให้ดูดีขึ้น */
+    .cat-card img {
+        height: 250px;
+        object-fit: cover;
+    }
+    /* สไตล์สำหรับ Hero Section */
+    .hero-section {
+        background-color: #f8f9fa;
+        padding: 50px 0;
+        text-align: center;
+        border-radius: 10px;
+        margin-top: 30px;
+    }
+</style>
+
+<div id="catHomeBanner" class="carousel slide cat-banner shadow" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+        <button type="button" data-bs-target="#catHomeBanner" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+        <button type="button" data-bs-target="#catHomeBanner" data-bs-slide-to="1" aria-label="Slide 2"></button>
+        <button type="button" data-bs-target="#catHomeBanner" data-bs-slide-to="2" aria-label="Slide 3"></button>
+    </div>
+
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img src="https://images.unsplash.com/photo-1548247416-ec66f4900b2e?auto=format&fit=crop&q=80&w=1600" class="d-block w-100" alt="ทาสแมว">
+            <div class="carousel-caption d-none d-md-block">
+                <h2 class="display-3 fw-bold">ยินดีต้อนรับสู่โลกของเจ้าเหมียว</h2>
+                <p class="lead">รวบรวมเรื่องน่ารู้และภาพน่ารักๆ ของน้องแมวทุกสายพันธุ์</p>
+
+            </div>
+        </div>
+        <div class="carousel-item">
+            <img src="https://images.unsplash.com/photo-1511275539165-cc46b1ee8960?auto=format&fit=crop&q=80&w=1600" class="d-block w-100" alt="ความน่ารัก">
+            <div class="carousel-caption d-none d-md-block">
+                <h1 class="display-3 fw-bold">ความน่ารักที่ยากจะต้านทาน</h1>
+                <p class="lead">มาดูกันว่าทำไมพวกเราถึงยอมเป็นทาสของน้องแมว</p>
+            </div>
+        </div>
+        <div class="carousel-item">
+            <img src="https://images.unsplash.com/photo-1518717758536-85ae29035b6d?auto=format&fit=crop&q=80&w=1600" class="d-block w-100" alt="คนรักแมว">
+            <div class="carousel-caption d-none d-md-block">
+                <h1 class="display-3 fw-bold">แหล่งรวมข้อมูลสำหรับคนรักแมว</h1>
+                <p class="lead">ตั้งแต่การดูแล การเลี้ยงดู จนถึงเคล็ดลับต่างๆ</p>
+            </div>
+        </div>
+    </div>
+
+    <button class="carousel-control-prev" type="button" data-bs-target="#catHomeBanner" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#catHomeBanner" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
+</div>
+
+<div id="breedList" class="container my-5">
+    <div class="row g-4">
+        
+        <div class="col-md-4">
+            <div class="card cat-card h-100 shadow-sm">
+                <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&q=80&w=500" class="card-img-top" alt="Scottish Fold">
+                <div class="card-body">
+                    <h5 class="card-title">สก๊อตติช โฟลด์ (Scottish Fold)</h5>
+                    <p class="card-text">จุดเด่นคือหูพับที่เป็นเอกลักษณ์ ใบหน้ากลมโต นิสัยสุภาพ เรียบร้อย และเข้ากับคนได้ง่าย</p>
+                    <span class="badge bg-info text-dark">ยอดนิยม</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card cat-card h-100 shadow-sm">
+                <img src="https://images.unsplash.com/photo-1592194996308-7b43878e84a6?auto=format&fit=crop&q=80&w=500" class="card-img-top" alt="British Shorthair">
+                <div class="card-body">
+                    <h5 class="card-title">บริติช ชอร์ตแฮร์ (British Shorthair)</h5>
+                    <p class="card-text">แมวที่มีประวัติยาวนาน ตัวแน่น ขนหนานุ่มเหมือนตุ๊กตาเทดดี้แบร์ นิสัยนิ่งสงบและเป็นอิสระ</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card cat-card h-100 shadow-sm">
+                <img src="https://images.unsplash.com/photo-1557246565-8a3d3ab5d7f6?auto=format&fit=crop&q=80&w=500" class="card-img-top" alt="Persian">
+                <div class="card-body">
+                    <h5 class="card-title">เปอร์เซีย (Persian)</h5>
+                    <p class="card-text">ราชินีแห่งแมว ขนยาวสลวย หน้าสั้นที่เป็นเอกลักษณ์ ต้องการการดูแลขนเป็นพิเศษ รักความสงบ</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

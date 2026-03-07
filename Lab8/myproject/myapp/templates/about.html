@@ -1,0 +1,123 @@
+ {% extends "base.html" %}
+ {% block title %}
+
+ <title>About</title>
+
+ {% endblock %}
+ {% block content %}
+
+<style>
+    /* ส่วนหัวของ Gallery */
+    .gallery-header {
+        padding: 60px 0 40px;
+        text-align: center;
+        background: linear-gradient(135deg, #fff5e6 0%, #ffffff 100%);
+    }
+
+    /* สไตล์ของรูปภาพใน Gallery */
+    .gallery-item {
+        overflow: hidden;
+        border-radius: 15px;
+        position: relative;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        height: 300px; /* คุมความสูงให้เท่ากันทุกรูป */
+    }
+
+    .gallery-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease; /* เอฟเฟกต์ตอนซูม */
+    }
+
+    /* เอฟเฟกต์เมื่อ Hover (เอาเมาส์วาง) */
+    .gallery-item:hover img {
+        transform: scale(1.1); /* ซูมเข้าไป 10% */
+    }
+
+    .gallery-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 15px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        text-align: center;
+    }
+
+    .gallery-item:hover .gallery-overlay {
+        opacity: 1;
+    }
+</style>
+
+
+
+<div class="container my-5">
+    <div class="row g-4">
+        <div class="col-lg-4 col-md-6">
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1533738363-b7f9aef128ce?auto=format&fit=crop&q=80&w=800" alt="แมวใส่แว่น">
+                <div class="gallery-overlay">
+                    <h5>น้องแมวสุดคูล</h5>
+                    <p>สไตล์เท่ๆ ของเจ้าเหมียว</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="gallery-item">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXb47hf1Nwjhmvau_IZQL7MKXv6d0Glw2YdA&s" alt="แมวส้ม">
+                <div class="gallery-overlay">
+                    <h5>เจ้าส้มจอมกวน</h5>
+                    <p>แมวส้มที่ใครๆ ก็หลงรัก</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&q=80&w=800" alt="แมวนั่ง">
+                <div class="gallery-overlay">
+                    <h5>มุมสงบ</h5>
+                    <p>เวลาพักผ่อนของเจ้านาย</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="gallery-item">
+                <img src="https://tse1.mm.bing.net/th/id/OIP.ipLYzY3hZ-tnQ6TPimWRoQHaEo?rs=1&pid=ImgDetMain&o=7&rm=3" alt="แมวเด็ก">
+                <div class="gallery-overlay">
+                    <h5>ลูกแมวตัวน้อย</h5>
+                    <p>ความน่ารักแบบคูณสอง</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1519052537078-e6302a4968d4?auto=format&fit=crop&q=80&w=800" alt="แมวนอน">
+                <div class="gallery-overlay">
+                    <h5>เวลานอนคือเรื่องใหญ่</h5>
+                    <p>Zzz... อย่ากวนนะมนุษย์</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6">
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1543852786-1cf6624b9987?auto=format&fit=crop&q=80&w=800" alt="แมวเล่น">
+                <div class="gallery-overlay">
+                    <h5>นักล่าตัวจิ๋ว</h5>
+                    <p>ความซนที่หยุดไม่ได้</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    
+{% endblock %}
