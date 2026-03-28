@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}
+<title>หน้าแรกของเว็บไซด์ - แนะนำพันธุ์แมว</title>
+{% endblock %}
+
+
+{% block content %}
+<table class="table table-hover">
+  <thead>
+    <tr>
+      <th scope="col">รหัสประชากร</th>
+      <th scope="col">ชื่อประชากร</th>
+      <th scope="col">อายุ</th>
+      <th scope="col">วันที่เพิ่มข้อมูล</th>      
+      <th scope="col">แก้ไข</th>
+      <th scope="col">ลบ</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for person in all_person %}
+    <tr>
+      <th scope="row">{{person.id}}</th>
+      <td>{{person.name}}</td>
+      <td>{{person.age}}</td>
+      <td>{{ person.date|date:" d F Y" }}</td>
+      <td><a href="#" class ="btn  btn-warning">แก้ไข</a></td>
+      <td><a href="#" class ="btn  btn-danger">ลบ</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
