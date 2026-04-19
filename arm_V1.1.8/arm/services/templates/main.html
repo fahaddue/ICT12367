@@ -1,0 +1,783 @@
+{% extends 'base.html' %} {% block page_title %}
+  สรุปข้อมูลการเช่า
+{% endblock %}
+{% block content %}
+  <div class="container-fluid py-2">
+    <!-- ส่วนหัว ข้อมูลผู้ใช้ (ดึงข้อมูล Admin จากฐานข้อมูล) -->
+    <div class="card border border-secondary-subtle shadow-sm mb-4">
+      <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center bg-white rounded">
+        <div class="d-flex align-items-center mb-3 mb-md-0">
+          <div class="bg-primary text-white rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+            <i class="fas fa-user-shield fs-4"></i>
+          </div>
+          <div>
+            <!-- แสดงชื่อ-นามสกุล Admin -->
+            <h5 class="text-dark fw-bold mb-1">ยินดีต้อนรับ, คุณ {{ admin.first_name }} {{ admin.last_name }}</h5>
+            <p class="text-muted small mb-0">
+              <i class="fas fa-id-badge me-1"></i> ชื่อผู้ใช้งาน: {{ admin.username }} |
+              <i class="fas fa-user-tag me-1 ms-2"></i> ระดับสิทธิ์:{% if admin.role == 'owner' %}
+                เจ้าของหอพัก
+              {% else %}
+                พนักงานดูแล
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ข้อความแจ้งเตือนถูกแสดงเป็น Toast โดย base.html #}
+
+    <!-- การ์ดสรุปสถานะห้องพัก -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-primary bg-opacity-10 text-primary rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-door-open fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">ห้องพักทั้งหมด</h6>
+              <h4 class="mb-0 fw-bold text-dark">{{ room_total|default:"0" }} <span class="fs-6 fw-normal text-muted">ห้อง</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-success bg-opacity-10 text-success rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-key fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">ห้องว่าง</h6>
+              <h4 class="mb-0 fw-bold text-success">{{ room_available|default:"0" }} <span class="fs-6 fw-normal text-muted">ห้อง</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-info bg-opacity-10 text-info rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-users fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">มีผู้เช่า</h6>
+              <h4 class="mb-0 fw-bold text-info">{{ room_occupied|default:"0" }} <span class="fs-6 fw-normal text-muted">ห้อง</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-warning bg-opacity-10 text-warning rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-tools fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">อยู่ระหว่างซ่อม</h6>
+              <h4 class="mb-0 fw-bold text-warning">{{ room_maintenance|default:"0" }} <span class="fs-6 fw-normal text-muted">ห้อง</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ส่วนจัดการห้องพัก (Room CRUD) -->
+    <div class="card border border-secondary-subtle shadow-sm mb-4">
+      <div class="card-header bg-white p-3 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <h6 class="mb-0 fw-bold text-dark text-nowrap"><i class="fas fa-door-open text-primary me-2"></i>จัดการข้อมูลห้องพัก</h6>
+        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+          <button type="button" class="btn btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
+              <i class="fas fa-plus-circle me-2"></i>เพิ่มประเภทห้อง
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#c_room">
+            <i class="fa-solid fa-plus me-1"></i> เพิ่มห้องพัก
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body p-0 p-md-3">
+        {% if not rooms %}
+          <div class="text-center text-muted py-5">
+            <i class="fas fa-folder-open fs-1 text-secondary opacity-50 mb-3"></i><br />
+            <h5 class="text-secondary">ยังไม่มีข้อมูลห้องพักในระบบ</h5>
+            <p class="small mb-0">กดปุ่ม "เพิ่มห้องพัก" เพื่อเริ่มต้นใช้งาน</p>
+          </div>
+        {% else %}
+          <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover align-middle mb-0 text-center text-md-start">
+              <thead class="table-dark text-white small">
+                <tr>
+                  <th scope="col" class="ps-md-4">เลขห้อง</th>
+                  <th scope="col">ชั้น</th>
+                  <th scope="col">ประเภทห้อง</th>
+                  <th scope="col">รายละเอียด</th>
+                  <th scope="col">ค่าเช่า (เดือน)</th>
+                  <th scope="col" class="text-center">สถานะห้อง</th>
+                  <th scope="col" class="text-center">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody class="small">
+                {% for r in rooms %}
+                  <tr>
+                    <td class="ps-md-4 fw-bold text-primary">{{ r.room_number }}</td>
+                    <td>{{ r.floor }}</td>
+                    <td>{{ r.room_type.name }}</td>
+                    <td class="text-truncate" style="max-width: 220px;" title="{{ r.room_type.description }}">{{ r.room_type.description|default:'-' }}</td>
+                    <td>{{ r.room_type.base_price|floatformat:2 }} บาท</td>
+                    <td class="text-center">
+                      {% if r.status == 'available' %}
+                        <span class="badge bg-success px-3 py-2 rounded-1">ว่าง</span>
+                      {% elif r.status == 'occupied' %}
+                        <span class="badge bg-primary px-3 py-2 rounded-1">มีผู้เช่า</span>
+                      {% else %}
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-1">อยู่ระหว่างซ่อม</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editRoomModal-{{ r.id }}">
+                        <i class="fas fa-pen me-1"></i>แก้ไข
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteRoomModal-{{ r.id }}">
+                        <i class="fas fa-trash me-1"></i>ลบ
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if rooms.has_other_pages %}
+        <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 py-2 px-3">
+          <small class="text-muted">แสดง {{ rooms.start_index }}–{{ rooms.end_index }} จาก {{ rooms.paginator.count }} รายการ</small>
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not rooms.has_previous %}disabled{% endif %}">
+              <a class="page-link" href="?page={{ contracts.number }}&room_page={% if rooms.has_previous %}{{ rooms.previous_page_number }}{% else %}1{% endif %}">«</a>
+            </li>
+            {% for num in rooms.paginator.page_range %}
+              <li class="page-item {% if rooms.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ contracts.number }}&room_page={{ num }}">{{ num }}</a>
+              </li>
+            {% endfor %}
+            <li class="page-item {% if not rooms.has_next %}disabled{% endif %}">
+              <a class="page-link" href="?page={{ contracts.number }}&room_page={% if rooms.has_next %}{{ rooms.next_page_number }}{% else %}{{ rooms.number }}{% endif %}">»</a>
+            </li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- การ์ดสรุปสถานะสัญญาเช่า -->
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-primary bg-opacity-10 text-primary rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-file-contract fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">สัญญาทั้งหมด</h6>
+              <h4 class="mb-0 fw-bold text-dark">{{ contract_total|default:"0" }} <span class="fs-6 fw-normal text-muted">ฉบับ</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-success bg-opacity-10 text-success rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-check-circle fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">สัญญาปกติ</h6>
+              <h4 class="mb-0 fw-bold text-success">{{ contract_active|default:"0" }} <span class="fs-6 fw-normal text-muted">ฉบับ</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-warning bg-opacity-10 text-warning rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-hourglass-half fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">แจ้งยกเลิก</h6>
+              <h4 class="mb-0 fw-bold text-warning">{{ contract_cancel_requested|default:"0" }} <span class="fs-6 fw-normal text-muted">ฉบับ</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-md-3">
+        <div class="card border border-secondary-subtle shadow-sm h-100 bg-white hover-shadow transition-all">
+          <div class="card-body d-flex align-items-center p-3">
+            <div class="bg-danger bg-opacity-10 text-danger rounded d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px;">
+              <i class="fas fa-times-circle fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted fw-bold mb-1 small">สิ้นสุดสัญญา</h6>
+              <h4 class="mb-0 fw-bold text-danger">{{ contract_inactive|default:"0" }} <span class="fs-6 fw-normal text-muted">ฉบับ</span></h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ส่วนรายการสัญญาเช่า -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-white p-3 border-bottom">
+        <!-- ส่วน Filter ค้นหา กรองข้อมูล และปุ่มสลับมุมมอง -->
+        <div class="row g-2 align-items-center justify-content-end">
+          <h6 class="mb-0 fw-bold text-dark text-nowrap"><i class="fa-solid fa-file-contract text-primary me-2"></i>จัดการข้อมูลสัญญาเช่า</h6>
+          <!-- ช่องค้นหา -->
+          <div class="col-12 col-md-4 col-lg-5">
+            <div class="input-group">
+              <span class="input-group-text bg-light text-secondary"><i class="fas fa-search"></i></span>
+              <input type="text" id="searchRoomInput" class="form-control" placeholder="ค้นหาจากเลขห้อง..." />
+            </div>
+          </div>
+          <!-- ตัวกรองสถานะ -->
+          <div class="col-12 col-md-4 col-lg-4">
+            <div class="input-group">
+              <span class="input-group-text bg-light text-secondary"><i class="fas fa-filter"></i></span>
+              <select id="statusFilter" class="form-select">
+                <option value="all">สถานะสัญญา: ทั้งหมด</option>
+                <option value="active">ปกติ</option>
+                <option value="inactive">สิ้นสุดสัญญา</option>
+              </select>
+            </div>
+          </div>
+          <!-- ปุ่มสลับมุมมอง List / Grid -->
+          <div class="col-12 col-md-auto text-end">
+            <div class="btn-group" role="group" aria-label="View toggle">
+              <button type="button" class="btn btn-outline-primary active" id="btnListView" title="มุมมองแบบรายการ"><i class="fas fa-list"></i></button>
+              <button type="button" class="btn btn-outline-primary" id="btnGridView" title="มุมมองแบบกริด"><i class="fas fa-th"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-body p-0 p-md-3">
+        <!-- กรณีไม่มีข้อมูลมาจาก Database เลย (แสดงครอบคลุมทั้ง 2 view) -->
+        {% if not contracts %}
+          <div class="text-center text-muted py-5" id="emptyDbMessage">
+            <i class="fas fa-folder-open fs-1 text-secondary opacity-50 mb-3"></i><br />
+            <h5 class="text-secondary">ไม่พบข้อมูลการเช่าในระบบ</h5>
+          </div>
+        {% endif %}
+
+        <!-- ข้อความแสดงเมื่อค้นหาไม่พบ (ซ่อนไว้เป็นค่าเริ่มต้น) -->
+        <div class="text-center text-muted py-5" id="noResultsJsMessage" style="display: none">
+          <i class="fas fa-search fs-1 text-secondary opacity-50 mb-3"></i><br />
+          <h5 class="text-secondary">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</h5>
+        </div>
+
+        <!-- 1. มุมมองแบบรายการ (List View) -->
+        <div id="listViewContainer" class="table-responsive">
+          <table class="table table-bordered table-striped table-hover align-middle mb-0 text-center text-md-start" id="contractsTable">
+            <thead class="table-dark text-white small">
+              <tr>
+                <th scope="col" class="ps-md-4">เลขห้อง</th>
+                <th scope="col">ชั้น</th>
+                <th scope="col">ประเภทห้อง</th>
+                <th scope="col">รายละเอียด</th>
+                <th scope="col">ราคาเช่า (เดือน)</th>
+                <th scope="col">ผู้เช่า</th>
+                <th scope="col">วันที่เริ่มสัญญา</th>
+                <th scope="col" class="text-center">สถานะสัญญา</th>
+                <th scope="col" class="text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="small">
+              {% for c in contracts %}
+                <tr class="contract-item contract-row"
+                  data-status="{% if c.is_active %}
+                    active
+                  {% else %}
+                    inactive
+                  {% endif %}">
+                  <td class="ps-md-4 fw-bold text-primary room-number">{{ c.room.room_number }}</td>
+                  <td class="ps-md-4 fw-bold text-primary room-number">{{ c.room.floor }}</td>
+                  <td>{{ c.room.room_type.name }}</td>
+                  <td class="ps-md-4 fw-bold text-primary room-number">{{ c.room.room_type.description }}</td>
+                  <td class="ps-md-4 fw-bold text-primary room-number">{{ c.room.room_type.base_price }}</td>
+                  <td class="ps-md-4 fw-bold text-primary room-number">{{ c.tenant.first_name }} {{ c.tenant.last_name }}</td>
+                  <td>{{ c.start_date|date:'d M Y' }}</td>
+                  <td class="text-center">
+                    {% if c.is_active %}
+                      {% if c.is_cancel_requested %}
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-1" title="มีผลวันที่ {{ c.cancel_effective_date|date:'d/m/Y' }}">แจ้งออก ({{ c.cancel_effective_date|date:'d/m' }})</span>
+                      {% else %}
+                        <span class="badge bg-success px-3 py-2 rounded-1">ปกติ</span>
+                      {% endif %}
+                    {% else %}
+                      <span class="badge bg-danger px-3 py-2 rounded-1">สิ้นสุดสัญญา</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#tenantdetail-{{ c.id }}">
+                      <i class="fas fa-pen me-1"></i>
+                      แก้ไข
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. มุมมองแบบกริด (Grid View) - ซ่อนไว้เป็นค่าเริ่มต้น -->
+        <div id="gridViewContainer" class="row g-3" style="display: none">
+          {% for c in contracts %}
+            <div class="col-12 col-sm-6 col-lg-4 contract-item contract-card"
+              data-status="{% if c.is_active %}
+                active
+              {% else %}
+                inactive
+              {% endif %}">
+              <div class="card h-100 border-secondary-subtle shadow-sm hover-shadow transition-all">
+                <div class="card-body">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title fw-bold text-primary mb-0 room-number">ห้อง {{ c.room.room_number }}</h5>
+                    <div>
+                      {% if c.is_active %}
+                        {% if c.is_cancel_requested %}
+                          <span class="badge bg-warning text-dark rounded-pill px-3 py-1" title="มีผลวันที่ {{ c.cancel_effective_date|date:'d/m/Y' }}">แจ้งออก</span>
+                        {% else %}
+                          <span class="badge bg-success rounded-pill px-3 py-1">ปกติ</span>
+                        {% endif %}
+                      {% else %}
+                        <span class="badge bg-danger rounded-pill px-3 py-1">สิ้นสุด</span>
+                      {% endif %}
+                    </div>
+                  </div>
+                  <div class="mb-3 text-muted small">
+                    <p class="mb-1">
+                      <i class="fas fa-door-open me-2 w-15px text-center"></i> {{ c.room.room_type.name }}
+                    </p>
+                    <p class="mb-1">
+                      <i class="fas fa-calendar-alt me-2 w-15px text-center"></i>
+                      เริ่ม: {{ c.start_date|date:'d M Y' }}
+                    </p>
+                    <p class="mb-0">
+                      <i class="fas fa-user me-2 w-15px text-center"></i> {{ c.tenant.first_name }} {{ c.tenant.last_name }}
+                    </p>
+                  </div>
+                  <button class="btn btn-outline-primary w-100 btn-sm" data-bs-toggle="modal" data-bs-target="#tenantdetail-{{ c.id }}">ดูรายละเอียด</button>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      {% if contracts.has_other_pages %}
+        <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 py-2 px-3">
+          <small class="text-muted">แสดง {{ contracts.start_index }}–{{ contracts.end_index }} จาก {{ contracts.paginator.count }} รายการ</small>
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not contracts.has_previous %}disabled{% endif %}">
+              <a class="page-link" href="?page={% if contracts.has_previous %}{{ contracts.previous_page_number }}{% else %}1{% endif %}&room_page={{ rooms.number }}">«</a>
+            </li>
+            {% for num in contracts.paginator.page_range %}
+              <li class="page-item {% if contracts.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&room_page={{ rooms.number }}">{{ num }}</a>
+              </li>
+            {% endfor %}
+            <li class="page-item {% if not contracts.has_next %}disabled{% endif %}">
+              <a class="page-link" href="?page={% if contracts.has_next %}{{ contracts.next_page_number }}{% else %}{{ contracts.number }}{% endif %}&room_page={{ rooms.number }}">»</a>
+            </li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modal: เพิ่มประเภทห้อง (ยังไม่เชื่อม backend - placeholder) -->
+<div class="modal fade" id="addRoomTypeModal" tabindex="-1" aria-labelledby="addRoomTypeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="addRoomTypeModalLabel"><i class="fas fa-tags me-2"></i>เพิ่มประเภทห้องพักใหม่</h5>
+            </div>
+            <form action="{% url 'room_type_add' %}" method="POST" class="sweet-confirm" data-title="ยืนยันการเพิ่มประเภทห้อง?" data-text="บันทึกประเภทห้องใหม่เข้าสู่ระบบใช่หรือไม่" data-icon="question" data-confirm="ใช่, บันทึก">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="name" class="form-label fw-bold small">ชื่อประเภทห้อง <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="เช่น แอร์ (VIP), พัดลม (Standard)" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="base_price" class="form-label fw-bold small">ราคาเช่าพื้นฐาน (บาท/เดือน) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">฿</span>
+                            <input type="number" step="0.01" class="form-control" id="base_price" name="base_price" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label for="description" class="form-label fw-bold small">รายละเอียดประเภทห้อง</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="ระบุสิ่งอำนวยความสะดวก..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary px-4">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+  <!-- Modal: เพิ่มห้องพัก (เชื่อมกับ room_add) -->
+<div class="modal fade" id="c_room" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="c_roomLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-light border-bottom-0">
+        <h5 class="modal-title fw-bold" id="c_roomLabel">เพิ่มห้องพัก</h5>
+      </div>
+      <form method="POST" action="{% url 'room_add' %}" class="sweet-confirm" data-title="ยืนยันการเพิ่มห้องพัก?" data-text="คุณต้องการเพิ่มห้องพักใหม่เข้าสู่ระบบใช่หรือไม่" data-icon="question" data-confirm="ใช่, เพิ่มเลย">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="row g-4">
+            <div class="col-md-6">
+              <label class="form-label text-muted fw-bold mb-1">ชั้น</label>
+              <input type="number" id="id_floor" name="floor" min="1" class="form-control form-control-lg fs-6" placeholder="เช่น 1" required />
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label text-muted fw-bold mb-1">หมายเลขห้อง</label>
+              <input type="text" id="id_room_number" name="room_number" class="form-control form-control-lg fs-6" maxlength="10" placeholder="เช่น 101" required />
+            </div>
+            
+            <div class="col-md-6">
+              <label class="form-label text-muted fw-bold mb-1">ประเภทห้อง</label>
+              <select name="room_type_id" class="form-select form-select-lg fs-6" required>
+                <option value="">— เลือกประเภทห้อง —</option>
+                {% for rt in room_types %}
+                  <option value="{{ rt.id }}">{{ rt.name }} ({{ rt.base_price|floatformat:0 }} บาท/เดือน)</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label text-muted fw-bold mb-1">สถานะห้อง</label>
+              <select name="status" class="form-select form-select-lg fs-6">
+                <option value="available" selected>ว่าง</option>
+                <option value="occupied">มีผู้เช่า</option>
+                <option value="maintenance">อยู่ระหว่างซ่อม</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer bg-light border-top-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> บันทึกห้องพัก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const floorInput = document.getElementById('id_floor');
+    const roomInput = document.getElementById('id_room_number');
+    
+    // ดึงรายชื่อเลขห้องที่มีอยู่แล้วจากตัวแปรห้องพัก (Django template variable)
+    // เราจะสร้าง Array ของเลขห้องที่มีอยู่แล้วในระบบ
+    const existingRooms = [
+        {% for n in all_room_numbers %}"{{ n }}",{% endfor %}
+    ];
+
+    floorInput.addEventListener('input', function() {
+        const floor = this.value;
+        if (floor && floor > 0) {
+            let sequence = 1;
+            let suggestedRoom = "";
+            
+            // วนลูปหาเลขห้องที่ยังว่างอยู่
+            while (true) {
+                // สร้างรูปแบบเลขห้อง เช่น ชั้น 1 -> 101, 102 | ชั้น 2 -> 201, 202
+                // ใช้การเติม 0 ข้างหน้าหลักหน่วย (01, 02)
+                let suffix = sequence < 10 ? "0" + sequence : sequence;
+                suggestedRoom = floor + suffix;
+                
+                // ถ้าเลขห้องนี้ยังไม่มีในระบบ ให้ใช้เลขนี้และหยุดลูป
+                if (!existingRooms.includes(suggestedRoom)) {
+                    break;
+                }
+                sequence++;
+            }
+            
+            roomInput.value = suggestedRoom;
+        } else {
+            roomInput.value = "";
+        }
+    });
+});
+</script>
+
+  <!-- Modals: แก้ไข / ลบ (วนตามห้องพักแต่ละห้อง) -->
+  {% for r in rooms %}
+    <!-- Modal แก้ไขห้อง -->
+    <div class="modal fade" id="editRoomModal-{{ r.id }}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="editRoomLabel-{{ r.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-light border-bottom-0">
+            <h5 class="modal-title fw-bold" id="editRoomLabel-{{ r.id }}">
+              แก้ไขข้อมูลห้อง <span class="text-primary">{{ r.room_number }}</span>
+            </h5>
+          </div>
+          <form method="POST" action="{% url 'room_edit' r.id %}" class="sweet-confirm" data-title="บันทึกการแก้ไขห้องพัก?" data-text="ระบบจะปรับปรุงข้อมูลห้องพักนี้ให้เป็นปัจจุบัน" data-icon="question" data-confirm="ใช่, บันทึก">
+            {% csrf_token %}
+            <div class="modal-body p-4">
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">หมายเลขห้อง</label>
+                  <input type="text" name="room_number" class="form-control form-control-lg fs-6" maxlength="10" value="{{ r.room_number }}" required />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">ชั้น</label>
+                  <input type="number" name="floor" min="1" class="form-control form-control-lg fs-6" value="{{ r.floor }}" required />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">ประเภทห้อง</label>
+                  <select name="room_type_id" class="form-select form-select-lg fs-6" required>
+                    {% for rt in room_types %}
+                      <option value="{{ rt.id }}" {% if rt.id == r.room_type_id %}selected{% endif %}>{{ rt.name }} ({{ rt.base_price|floatformat:0 }} บาท/เดือน)</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">สถานะห้อง</label>
+                  <select name="status" class="form-select form-select-lg fs-6">
+                    <option value="available" {% if r.status == 'available' %}selected{% endif %}>ว่าง</option>
+                    <option value="occupied" {% if r.status == 'occupied' %}selected{% endif %}>มีผู้เช่า</option>
+                    <option value="maintenance" {% if r.status == 'maintenance' %}selected{% endif %}>อยู่ระหว่างซ่อม</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> บันทึกการแก้ไข</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal ยืนยันการลบห้อง -->
+    <div class="modal fade" id="deleteRoomModal-{{ r.id }}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="deleteRoomLabel-{{ r.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-light border-bottom-0">
+            <h5 class="modal-title fw-bold text-danger" id="deleteRoomLabel-{{ r.id }}">
+              <i class="fas fa-triangle-exclamation me-2"></i>ยืนยันการลบห้องพัก
+            </h5>
+          </div>
+          <form method="POST" action="{% url 'room_delete' r.id %}" class="sweet-confirm" data-title="ยืนยันการลบห้องพัก?" data-text="การลบนี้ไม่สามารถย้อนกลับได้ หากห้องนี้มีสัญญาเช่าผูกอยู่ ระบบจะไม่อนุญาตให้ลบ" data-icon="warning" data-confirm="ใช่, ลบห้อง">
+            {% csrf_token %}
+            <div class="modal-body p-4">
+              <p class="mb-2">คุณต้องการลบห้อง <strong class="text-primary">{{ r.room_number }}</strong> (ชั้น {{ r.floor }}) ออกจากระบบใช่หรือไม่?</p>
+              <p class="text-muted small mb-0"><i class="fas fa-info-circle me-1"></i> หากห้องนี้มีสัญญาเช่าผูกอยู่ ระบบจะไม่อนุญาตให้ลบ</p>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-danger"><i class="fas fa-trash me-1"></i> ยืนยันการลบ</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- Modal รายละเอียดและแก้ไขสัญญาเช่า (วนตามสัญญาแต่ละรายการ) -->
+  {% for c in contracts %}
+    <div class="modal fade" id="tenantdetail-{{ c.id }}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="modalLabel-{{ c.id }}" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header bg-light border-bottom-0">
+            <h5 class="modal-title fw-bold" id="modalLabel-{{ c.id }}">
+              รายละเอียดและแก้ไขสัญญาเช่า - ห้อง
+              <span class="text-primary">{{ c.room.room_number }}</span>
+            </h5>
+          </div>
+
+          <form action="{% url 'contract_edit' c.id %}" method="POST" class="sweet-confirm" data-title="บันทึกการแก้ไขสัญญาเช่า?" data-text="ระบบจะปรับปรุงข้อมูลสัญญาและผู้เช่าของห้องนี้ทันที" data-icon="question" data-confirm="ใช่, บันทึก">
+            {% csrf_token %}
+            <div class="modal-body p-4">
+              <div class="row g-4">
+                {% if c.is_cancel_requested and c.is_active %}
+                <div class="col-12 mt-0">
+                    <div class="alert alert-warning py-3 mb-0">
+                        <h6 class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i> ห้องนี้มีการแจ้งออกล่วงหน้า</h6>
+                        <p class="small mb-0 text-dark">ลูกบ้านได้ทำการแจ้งยกเลิกสัญญาเช่าล่วงหน้า 30 วัน สัญญาเช่าฉบับนี้จะสิ้นสุดและคืนสถานะห้องว่างอัตโนมัติในวันที่ <strong>{{ c.cancel_effective_date|date:'d/m/Y' }}</strong></p>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">ผู้เช่า (ชื่อ-นามสกุล)</label>
+                  <input type="text" class="form-control form-control-lg fs-6" name="tenant_name" value="{{ c.tenant.first_name }} {{ c.tenant.last_name }}" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">รหัสบัตรประชาชนผู้เช่า</label>
+                  <input type="text" class="form-control form-control-lg fs-6" name="id_card_no" value="{{ c.tenant.id_card_no }}" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">วันที่เริ่มสัญญา</label>
+                  <input type="date" class="form-control form-control-lg fs-6" name="start_date" value="{{ c.start_date|date:'Y-m-d' }}" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">วันที่สิ้นสุดสัญญา</label>
+                  <input type="date" class="form-control form-control-lg fs-6" name="end_date" value="{% if c.cancel_effective_date %}{{ c.cancel_effective_date }}{% endif %}" />
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label text-muted fw-bold mb-1">เงินประกัน (มัดจำ)</label>
+                  <div class="input-group input-group-lg">
+                    <input type="number" step="0.01" class="form-control fs-6" name="deposit" value="{{ c.deposit|floatformat:2 }}" />
+                    <span class="input-group-text fs-6 bg-light text-muted">บาท</span>
+                  </div>
+                </div>
+
+                <div class="col-md-6 d-flex flex-column justify-content-center pt-2">
+                  <label class="form-label text-muted fw-bold mb-2">สถานะสัญญา</label>
+                  <div>
+                    <select class="form-select form-select-lg fs-6" name="is_active">
+                      <option value="True" {% if c.is_active %}selected{% endif %}>• สัญญาปกติ (Active)</option>
+                      <option value="False" {% if not c.is_active %}selected{% endif %}>• สิ้นสุดสัญญา (Inactive)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer bg-light border-top-0">
+              <a href="simple.pdf" download="เอกสารสัญญาเช่า" class="btn btn-outline-danger me-auto">
+                <i class="fa-solid fa-download"></i> โหลดสัญญาเช่า
+              </a>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+              <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i> บันทึกการแก้ไข</button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  <style>
+    /* CSS เพิ่มเติมเพื่อให้ Grid Card ดูสวยงามเวลา Hover */
+    .hover-shadow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .w-15px {
+      width: 15px;
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const searchInput = document.getElementById('searchRoomInput')
+      const statusFilter = document.getElementById('statusFilter')
+
+      // Element สำหรับ View Toggle
+      const btnListView = document.getElementById('btnListView')
+      const btnGridView = document.getElementById('btnGridView')
+      const listViewContainer = document.getElementById('listViewContainer')
+      const gridViewContainer = document.getElementById('gridViewContainer')
+
+      // Messages
+      const noResultsJsMessage = document.getElementById('noResultsJsMessage')
+      const emptyDbMessage = document.getElementById('emptyDbMessage')
+
+      // Items ทั้งหมดที่ต้องถูกกรอง (ทั้งแบบแถวและแบบการ์ด)
+      const allItems = document.querySelectorAll('.contract-item')
+
+      // ฟังก์ชันสลับมุมมอง
+      function switchView(viewType) {
+        if (emptyDbMessage) return // ถ้าไม่มีข้อมูลในระบบเลย ไม่ต้องทำอะไร
+
+        if (viewType === 'grid') {
+          listViewContainer.style.display = 'none'
+          gridViewContainer.style.display = 'flex' // แสดงแบบ flex row
+          btnGridView.classList.add('active')
+          btnListView.classList.remove('active')
+        } else {
+          listViewContainer.style.display = 'block'
+          gridViewContainer.style.display = 'none'
+          btnListView.classList.add('active')
+          btnGridView.classList.remove('active')
+        }
+
+        // บันทึกการตั้งค่าลง LocalStorage เผื่อผู้ใช้รีเฟรชหน้า (Optional)
+        localStorage.setItem('preferredContractView', viewType)
+      }
+
+      // โหลดมุมมองที่ผู้ใช้เลือกไว้ล่าสุด
+      const savedView = localStorage.getItem('preferredContractView')
+      if (savedView === 'grid') {
+        switchView('grid')
+      }
+
+      // Event Listeners สำหรับปุ่มสลับมุมมอง
+      if (btnListView) btnListView.addEventListener('click', () => switchView('list'))
+      if (btnGridView) btnGridView.addEventListener('click', () => switchView('grid'))
+
+      // ฟังก์ชันกรองข้อมูล (ทำงานครอบคลุมทั้ง List และ Grid)
+      function filterData() {
+        if (emptyDbMessage) return
+
+        const searchTerm = searchInput.value.toLowerCase().trim()
+        const statusTerm = statusFilter.value
+        let visibleCount = 0
+
+        // วนลูปเช็คทั้ง Table Row และ Grid Card
+        allItems.forEach((item) => {
+          const roomNumberElem = item.querySelector('.room-number')
+          const roomNumber = roomNumberElem ? roomNumberElem.textContent.toLowerCase() : ''
+          const rowStatus = item.getAttribute('data-status')
+
+          const matchesSearch = roomNumber.includes(searchTerm)
+          const matchesStatus = statusTerm === 'all' || rowStatus === statusTerm
+
+          if (matchesSearch && matchesStatus) {
+            item.style.display = '' // แสดงผล
+            visibleCount++
+          } else {
+            item.style.display = 'none' // ซ่อน
+          }
+        })
+
+        // ตรวจสอบว่าหลังจากกรองแล้วมีข้อมูลเหลืออยู่หรือไม่
+        if (visibleCount === 0) {
+          listViewContainer.classList.add('d-none')
+          gridViewContainer.classList.add('d-none')
+          noResultsJsMessage.style.display = 'block'
+        } else {
+          listViewContainer.classList.remove('d-none')
+          gridViewContainer.classList.remove('d-none')
+          noResultsJsMessage.style.display = 'none'
+        }
+      }
+
+      // Event Listeners สำหรับการค้นหาและกรอง
+      if (searchInput) searchInput.addEventListener('input', filterData)
+      if (statusFilter) statusFilter.addEventListener('change', filterData)
+    })
+  </script>
+{% endblock %}

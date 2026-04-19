@@ -1,0 +1,718 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  ข้อมูลผู้เช่า - ARM System
+{% endblock %}
+{% block page_title %}
+  ข้อมูลผู้เช่าทั้งหมด
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-2">
+    <!-- กล่องสรุปสถิติด้านบน -->
+    <div class="row g-3 mb-4">
+        <!-- จำนวนผู้เช่าทั้งหมด -->
+        <div class="col-12 col-md-4">
+            <div class="card border-primary-subtle shadow-sm h-100 hover-shadow transition-all">
+                <div class="card-body p-3 d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+                        <i class="fas fa-users fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">จำนวนผู้เช่าทั้งหมด</h6>
+                        <h4 class="mb-0 fw-bold text-primary">{{ tenants.paginator.count|default:"0" }} <span class="fs-6 text-muted fw-normal">คน</span></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- รถยนต์ทั้งหมด -->
+        <div class="col-12 col-md-4">
+            <div class="card border-info-subtle shadow-sm h-100 hover-shadow transition-all">
+                <div class="card-body p-3 d-flex align-items-center">
+                    <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+                        <i class="fas fa-car fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">รถยนต์ทั้งหมด</h6>
+                        <h4 class="mb-0 fw-bold text-info">{{ total_cars|default:"0" }} <span class="fs-6 text-muted fw-normal">คัน</span></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- รถจักรยานยนต์ทั้งหมด -->
+        <div class="col-12 col-md-4">
+            <div class="card border-success-subtle shadow-sm h-100 hover-shadow transition-all">
+                <div class="card-body p-3 d-flex align-items-center">
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+                        <i class="fas fa-motorcycle fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-muted mb-1">รถจักรยานยนต์ทั้งหมด</h6>
+                        <h4 class="mb-0 fw-bold text-success">{{ total_motorcycles|default:"0" }} <span class="fs-6 text-muted fw-normal">คัน</span></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {# ข้อความแจ้งเตือนถูกแสดงเป็น Toast โดย base.html #}
+
+    <div class="card border border-secondary-subtle shadow-sm mb-4">
+      <!-- ส่วนหัว พร้อมกลุ่มเครื่องมือจัดชิดขวา -->
+      <div class="card-header bg-white p-3 border-bottom d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <h6 class="mb-0 fw-bold text-dark text-nowrap"><i class="fas fa-users text-primary me-2"></i>รายชื่อผู้เช่าในระบบ</h6>
+
+        <!-- กลุ่มเครื่องมือ -->
+        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center gap-2 w-100 justify-content-lg-end ms-lg-auto">
+          <!-- ช่องค้นหา -->
+          <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0" style="min-width: 200px;">
+            <span class="input-group-text bg-light text-secondary border-end-0"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchTenantInput" class="form-control border-start-0 ps-0" placeholder="ค้นหาชื่อ, รหัสปชช., เบอร์โทร..." />
+          </div>
+
+          <!-- ตัวกรอง -->
+          <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0" style="min-width: 150px;">
+            <span class="input-group-text bg-light text-secondary"><i class="fas fa-filter"></i></span>
+            <select id="filterTenant" class="form-select">
+              <option value="all">ทั้งหมด</option>
+              <option value="has_email">มีอีเมล</option>
+              <option value="no_email">ไม่มีอีเมล</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-sm w-10 w-sm-auto fw-bold" data-bs-toggle="modal" data-bs-target="#addTenantModal">
+            <i class="fas fa-user-plus me-1"></i> เพิ่มลูกบ้าน
+          </button>
+
+          <!-- ปุ่มสลับมุมมอง List / Grid -->
+          <div class="btn-group btn-group-sm ms-sm-2 me-sm-2" role="group">
+            <button type="button" class="btn btn-outline-primary active px-3" id="btnListView" title="มุมมองรายการ"><i class="fas fa-list"></i></button>
+            <button type="button" class="btn btn-outline-primary px-3" id="btnGridView" title="มุมมองกริด"><i class="fas fa-th"></i></button>
+          </div>
+
+          <!-- ปุ่มเพิ่มลูกบ้าน -->
+        
+        </div>
+      </div>
+
+      <div class="card-body p-0 p-md-3">
+        <!-- ข้อความแสดงกรณีไม่มีข้อมูลจาก Database เลย -->
+        {% if not tenants %}
+          <div class="text-center text-muted py-5" id="emptyDbMessage">
+            <i class="fas fa-folder-open fs-1 text-secondary opacity-50 mb-3"></i><br />
+            <h5 class="text-secondary">ไม่พบข้อมูลผู้เช่าในระบบ</h5>
+          </div>
+        {% endif %}
+
+        <!-- ข้อความแสดงเมื่อค้นหาไม่พบด้วย JS -->
+        <div class="text-center text-muted py-5" id="noResultsJsMessage" style="display: none;">
+          <i class="fas fa-search fs-1 text-secondary opacity-50 mb-3"></i><br />
+          <h5 class="text-secondary">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</h5>
+        </div>
+
+        <!-- 1. มุมมองแบบรายการ (List View) -->
+        <div id="listViewContainer" class="table-responsive">
+          <table class="table table-bordered table-striped table-hover align-middle mb-0 text-center text-md-start" id="tenantsTable">
+            <thead class="table-dark text-white small">
+              <tr>
+                <th scope="col" class="ps-md-4">รหัสประจำตัวประชาชน</th>
+                <th scope="col">ชื่อ-นามสกุล</th>
+                <th scope="col">เบอร์โทรศัพท์</th>
+                <th scope="col">ข้อมูลรถ</th>
+                <th scope="col">ที่อยู่ตามบัตรประชาชน</th>
+                <th scope="col" class="text-center">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody class="small text-dark">
+              {% for t in tenants %}
+                <tr class="tenant-item contract-row" data-email="{% if t.email %}yes{% else %}no{% endif %}">
+                  <td class="ps-md-4 fw-bold text-primary search-target">{{ t.id_card_no }}</td>
+                  <td class="search-target fw-semibold">{{ t.first_name }} {{ t.last_name }}</td>
+                  <td class="search-target">{{ t.phone }}</td>
+                  <td class="search-target">
+                      <!-- แสดงป้ายทะเบียนรถในตาราง -->
+                      {% for v in t.vehicles.all %}
+                        <span class="badge border border-secondary text-secondary mb-1">
+                            <i class="fas {% if v.vehicle_type == 'motorcycle' %}fa-motorcycle{% else %}fa-car{% endif %} me-1"></i>
+                            {{ v.license_plate }}
+                        </span><br>
+                      {% empty %}
+                        <span class="text-muted small">- ไม่มี -</span>
+                      {% endfor %}
+                  </td>
+                  <td class="search-target text-truncate" style="max-width: 200px;" title="{{ t.address }}">{{ t.address|default:'-'|truncatechars:30 }}</td>
+                  <td class="text-center align-middle">
+                    <button class="btn btn-sm btn-outline-primary px-3" data-bs-toggle="modal" data-bs-target="#tenant-modal-{{ t.id }}"><i class="fas fa-edit me-1"></i>จัดการข้อมูล</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 2. มุมมองแบบกริด (Grid View) -->
+        <div id="gridViewContainer" class="row g-3" style="display: none;">
+          {% for t in tenants %}
+            <div class="col-12 col-sm-6 col-xl-4 tenant-item" data-email="{% if t.email %}yes{% else %}no{% endif %}">
+              <div class="card h-100 border-secondary-subtle shadow-sm hover-shadow">
+                <div class="card-body">
+                  <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 45px; height: 45px;">
+                      <i class="fas fa-user fs-5"></i>
+                    </div>
+                    <div class="overflow-hidden">
+                      <h6 class="card-title fw-bold text-dark mb-0 text-truncate search-target">{{ t.first_name }} {{ t.last_name }}</h6>
+                      <small class="text-primary fw-bold search-target"><i class="fas fa-id-card me-1"></i>{{ t.id_card_no }}</small>
+                    </div>
+                  </div>
+
+                  <div class="small text-muted mb-3">
+                    <div class="d-flex mb-2 search-target">
+                      <i class="fas fa-phone-alt mt-1 me-2 text-secondary w-15px text-center"></i>
+                      <span>{{ t.phone|default:'-' }}</span>
+                    </div>
+                    <div class="d-flex mb-2 search-target">
+                      <i class="fas fa-car mt-1 me-2 text-secondary w-15px text-center"></i>
+                      <span>ยานพาหนะ: {{ t.vehicles.all.count }} คัน</span>
+                    </div>
+                    <div class="d-flex search-target">
+                      <i class="fas fa-map-marker-alt mt-1 me-2 text-secondary w-15px text-center"></i>
+                      <span class="text-truncate" title="{{ t.address }}">{{ t.address|default:'-'|truncatechars:40 }}</span>
+                    </div>
+                  </div>
+
+                  <!-- ปุ่ม Action -->
+                  <div class="mt-auto pt-2 text-end">
+                    <button class="btn btn-sm btn-outline-primary px-3" data-bs-toggle="modal" data-bs-target="#tenant-modal-{{ t.id }}"><i class="fas fa-edit me-1"></i> จัดการข้อมูล</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      {% if tenants.has_other_pages %}
+        <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 py-2 px-3">
+          <small class="text-muted">แสดง {{ tenants.start_index }}–{{ tenants.end_index }} จาก {{ tenants.paginator.count }} รายการ</small>
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not tenants.has_previous %}disabled{% endif %}">
+              <a class="page-link" href="?page={% if tenants.has_previous %}{{ tenants.previous_page_number }}{% else %}1{% endif %}">«</a>
+            </li>
+            {% for num in tenants.paginator.page_range %}
+              <li class="page-item {% if tenants.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+            {% endfor %}
+            <li class="page-item {% if not tenants.has_next %}disabled{% endif %}">
+              <a class="page-link" href="?page={% if tenants.has_next %}{{ tenants.next_page_number }}{% else %}{{ tenants.number }}{% endif %}">»</a>
+            </li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: เพิ่มลูกบ้านใหม่ (Add Tenant) -->
+  <!-- ============================================== -->
+  <div class="modal fade" id="addTenantModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" >
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-bottom-0">
+          <h5 class="modal-title fw-bold"><i class="fas fa-user-plus me-2"></i>เพิ่มข้อมูลผู้เช่ารายใหม่</h5>
+        </div>
+        <form method="POST" action="{% url 'tenant_add' %}" class="sweet-confirm" data-title="ยืนยันการเพิ่มผู้เช่า?" data-text="บันทึกข้อมูลผู้เช่ารายใหม่เข้าสู่ระบบใช่หรือไม่" data-icon="question" data-confirm="ใช่, เพิ่มผู้เช่า">
+          {% csrf_token %}
+          <div class="modal-body p-4">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">ชื่อ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="first_name" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">นามสกุล <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="last_name" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">เลขบัตรประชาชน (13 หลัก) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="id_card_no" maxlength="13" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">เบอร์โทรศัพท์ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="phone" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">อีเมล</label>
+                <input type="email" class="form-control" name="email">
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">ที่อยู่ตามทะเบียนบ้าน <span class="text-danger">*</span></label>
+                <textarea class="form-control" name="address" rows="3" required></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light border-top-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> บันทึกข้อมูล</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: จัดการข้อมูลผู้เช่าและรถ (Edit, Vehicles, Billing) -->
+  <!-- ============================================== -->
+  {% for t in tenants %}
+    <div class="modal fade" id="tenant-modal-{{ t.id }}" data-bs-backdrop="static" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow">
+          
+          <!-- Modal Header -->
+          <div class="modal-header bg-light border-bottom-0">
+            <h5 class="modal-title fw-bold text-dark">
+                <i class="fas fa-user-edit text-primary me-2"></i>จัดการข้อมูล: <span class="text-primary">{{ t.first_name }} {{ t.last_name }}</span>
+            </h5>
+          </div>
+
+          <div class="modal-body p-0">
+            <!-- ระบบ Tabs สำหรับแบ่งส่วนการจัดการ -->
+            <ul class="nav nav-tabs px-3 pt-3 bg-light border-bottom" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="info-tab-{{ t.id }}" data-bs-toggle="tab" data-bs-target="#info-pane-{{ t.id }}" type="button" role="tab">
+                    <i class="fas fa-id-card me-1"></i> ข้อมูลส่วนตัว
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="vehicle-tab-{{ t.id }}" data-bs-toggle="tab" data-bs-target="#vehicle-pane-{{ t.id }}" type="button" role="tab">
+                    <i class="fas fa-car me-1"></i> ยานพาหนะ <span class="badge bg-secondary ms-1">{{ t.vehicles.all.count }}</span>
+                </button>
+              </li>
+              <!-- แท็บที่เพิ่มมาใหม่: จัดการบิลและชำระเงิน -->
+              <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold text-success" id="billing-tab-{{ t.id }}" data-bs-toggle="tab" data-bs-target="#billing-pane-{{ t.id }}" type="button" role="tab">
+                    <i class="fas fa-file-invoice-dollar me-1"></i> บิลและชำระเงิน
+                </button>
+              </li>
+            </ul>
+
+            <div class="tab-content p-4 bg-white">
+              
+              <!-- TAB 1: แก้ไขข้อมูลส่วนตัว -->
+              <div class="tab-pane fade show active" id="info-pane-{{ t.id }}" role="tabpanel">
+                <form action="{% url 'tenant_edit' t.id %}" method="POST" class="sweet-confirm" data-title="บันทึกการแก้ไขข้อมูลผู้เช่า?" data-text="ระบบจะปรับปรุงข้อมูลส่วนตัวของผู้เช่าทันที" data-icon="question" data-confirm="ใช่, บันทึก">
+                  {% csrf_token %}
+                  <div class="row g-3">
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold">ชื่อ <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" name="first_name" value="{{ t.first_name }}" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold">นามสกุล <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" name="last_name" value="{{ t.last_name }}" required>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold">เลขบัตรประชาชน (ไม่สามารถแก้ไขได้)</label>
+                      <input type="text" class="form-control bg-light" value="{{ t.id_card_no }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold">เบอร์โทรศัพท์ <span class="text-danger">*</span></label>
+                      <input type="text" class="form-control" name="phone" value="{{ t.phone }}" required>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small fw-bold">อีเมล</label>
+                      <input type="email" class="form-control" name="email" value="{{ t.email|default:'' }}">
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small fw-bold">ที่อยู่ตามทะเบียนบ้าน <span class="text-danger">*</span></label>
+                      <textarea class="form-control" name="address" rows="3" required>{{ t.address }}</textarea>
+                    </div>
+                  </div>
+                  <div class="text-end mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"></i> ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> บันทึกข้อมูลส่วนตัว</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- TAB 2: จัดการยานพาหนะ -->
+              <div class="tab-pane fade" id="vehicle-pane-{{ t.id }}" role="tabpanel">
+                <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-list-ul me-2"></i>รถที่ลงทะเบียนแล้ว</h6>
+                <div class="list-group mb-4 shadow-sm">
+                  {% for v in t.vehicles.all %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                      <div>
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="bg-white border rounded p-1 me-2 shadow-sm" style="width: 40px; text-align: center;">
+                                <i class="fas {% if v.vehicle_type == 'car' %}fa-car text-primary{% elif v.vehicle_type == 'motorcycle' %}fa-motorcycle text-success{% else %}fa-truck text-secondary{% endif %}"></i>
+                            </div>
+                            <span class="fw-bold text-dark fs-6">{{ v.license_plate }}</span>
+                            <span class="badge bg-secondary ms-2">{{ v.province }}</span>
+                        </div>
+                        <small class="text-muted ms-5 d-block">
+                            ยี่ห้อ: {{ v.brand|default:"-" }} | สี: {{ v.color|default:"-" }}
+                            {% if v.note %}<br><i class="fas fa-info-circle me-1"></i> หมายเหตุ: {{ v.note }}{% endif %}
+                        </small>
+                      </div>
+                      <form action="{% url 'vehicle_delete' v.id %}" method="POST" class="m-0 sweet-confirm" data-title="ยืนยันการลบข้อมูลรถ?" data-text="ข้อมูลรถคันนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้" data-icon="warning" data-confirm="ใช่, ลบเลย">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-circle shadow-sm" title="ลบข้อมูลรถ">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </form>
+                    </div>
+                  {% empty %}
+                    <div class="list-group-item text-center text-muted py-4">
+                        <i class="fas fa-parking fs-2 mb-2 opacity-25"></i><br>
+                        <small>ยังไม่มีข้อมูลรถที่ลงทะเบียน</small>
+                    </div>
+                  {% endfor %}
+                </div>
+
+                <div class="card border border-primary-subtle bg-primary bg-opacity-10 shadow-sm mt-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3 text-primary"><i class="fas fa-plus-circle me-2"></i>เพิ่มรถคันใหม่ให้ผู้เช่า</h6>
+                        <form method="POST" action="{% url 'vehicle_add' t.id %}" class="sweet-confirm" data-title="ยืนยันการเพิ่มรถ?" data-text="บันทึกข้อมูลรถของผู้เช่ารายนี้เข้าสู่ระบบใช่หรือไม่" data-icon="question" data-confirm="ใช่, เพิ่มรถ">
+                          {% csrf_token %}
+                          <div class="row g-2">
+                            <div class="col-md-4">
+                              <label class="form-label small fw-bold">ประเภทรถ</label>
+                              <select class="form-select form-select-sm" name="vehicle_type" required>
+                                <option value="car">รถยนต์</option>
+                                <option value="motorcycle">จักรยานยนต์</option>
+                                <option value="other">อื่นๆ</option>
+                              </select>
+                            </div>
+                            <div class="col-md-4">
+                              <label class="form-label small fw-bold">ป้ายทะเบียน <span class="text-danger">*</span></label>
+                              <input type="text" class="form-control form-control-sm" name="license_plate" placeholder="เช่น กค 1234" required>
+                            </div>
+                            <div class="col-md-4">
+                              <label class="form-label small fw-bold">จังหวัด <span class="text-danger">*</span></label>
+                              <input type="text" class="form-control form-control-sm" name="province" placeholder="เช่น กรุงเทพมหานคร" required>
+                            </div>
+                            <div class="col-md-4 mt-2">
+                              <label class="form-label small fw-bold">ยี่ห้อ (Brand)</label>
+                              <input type="text" class="form-control form-control-sm" name="brand" placeholder="เช่น Honda">
+                            </div>
+                            <div class="col-md-4 mt-2">
+                              <label class="form-label small fw-bold">สีรถ</label>
+                              <input type="text" class="form-control form-control-sm" name="color" placeholder="เช่น ขาว">
+                            </div>
+                            <div class="col-md-4 mt-2">
+                              <label class="form-label small fw-bold">หมายเหตุ (จุดจอด)</label>
+                              <input type="text" class="form-control form-control-sm" name="note" placeholder="ข้อมูลเพิ่มเติม">
+                            </div>
+                            <div class="col-12 mt-3 text-end">
+                              <button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ยกเลิก</button>
+                              <button type="submit" class="btn btn-success btn-sm px-4 fw-bold"><i class="fas fa-plus me-1"></i>ยืนยันเพิ่มรถ</button>
+                            </div>
+                          </div>
+                        </form>
+                    </div>
+                </div>
+              </div>
+
+              <!-- TAB 3: จัดการบิลและการชำระเงิน (เพิ่มใหม่) -->
+              <div class="tab-pane fade" id="billing-pane-{{ t.id }}" role="tabpanel">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h6 class="fw-bold text-dark mb-0"><i class="fas fa-receipt me-2"></i>ประวัติบิลค่าเช่าของลูกบ้าน</h6>
+                      
+                      <!-- ตรวจสอบว่าผู้เช่ามีสัญญาเช่าที่กำลังใช้งาน (Active) อยู่หรือไม่ -->
+                      {% with active_contract=t.contract_set.first %}
+                        {% if active_contract %}
+                        <button type="button" class="btn btn-sm btn-primary shadow-sm" data-bs-toggle="collapse" data-bs-target="#createBillForm-{{ t.id }}">
+                            <i class="fas fa-plus-circle me-1"></i> ออกบิลใหม่
+                        </button>
+                        {% endif %}
+                      {% endwith %}
+                  </div>
+
+                  <!-- ฟอร์มออกบิลใหม่ (แสดงเมื่อกดปุ่ม "ออกบิลใหม่") -->
+                  {% with active_contract=t.contract_set.first %}
+                    {% if active_contract %}
+                    <div class="collapse mb-4" id="createBillForm-{{ t.id }}">
+                        <div class="card card-body bg-light border-primary-subtle shadow-sm">
+                            <h6 class="fw-bold text-primary mb-3">
+                                ออกบิลประจำเดือน - ห้อง <span class="badge bg-primary fs-6">{{ active_contract.room.room_number }}</span>
+                            </h6>
+                            <form action="{% url 'invoice_add' %}" method="POST" class="sweet-confirm" data-title="ยืนยันการออกบิลใหม่?" data-text="ระบบจะสร้างใบแจ้งหนี้ใหม่ให้ห้องพักนี้ทันที" data-icon="question" data-confirm="ใช่, ออกบิล">
+                                {% csrf_token %}
+                                <!-- ส่ง ID สัญญาเช่าไปสร้างบิล -->
+                                <input type="hidden" name="contract_id" value="{{ active_contract.id }}">
+                                
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">วันครบกำหนดชำระ <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control form-control-sm" name="due_date" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">ค่าห้อง (บาท) <span class="text-danger">*</span></label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm" name="room_charge" value="{{ active_contract.room.room_type.base_price }}" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">ค่าน้ำ (บาท)</label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm" name="water_charge" value="0.00" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold">ค่าไฟ (บาท)</label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm" name="electricity_charge" value="0.00" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-bold text-danger">ค่าปรับ / อื่นๆ (บาท)</label>
+                                        <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle" name="other_charge" value="0.00" placeholder="หากทำผิดกฎหรือมีค่าส่วนกลาง">
+                                    </div>
+                                    <div class="col-md-4 text-end mt-3">
+                                        <button type="submit" class="btn btn-success btn-sm w-100 fw-bold"><i class="fas fa-save me-1"></i> บันทึกการออกบิล</button>
+                                    </div>
+                                </div>                 
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                      <div class="alert alert-warning small py-2 mb-4">
+                          <i class="fas fa-exclamation-triangle me-1"></i> ลูกบ้านรายนี้ยังไม่มีสัญญาเช่าที่กำลังใช้งาน (Active) ระบบจึงยังไม่สามารถออกบิลได้
+                      </div>
+                    {% endif %}
+                  {% endwith %}
+
+                  <!-- ตารางแสดงบิลและปุ่มแก้ไขสถานะ -->
+                  <div class="table-responsive">
+                      <table class="table table-sm table-bordered table-hover align-middle small text-center mb-0 text-nowrap">
+                          <thead class="table-light">
+                              <tr>
+                                  <th>เลขที่บิล</th>
+                                  <th>ห้อง</th>
+                                  <th>วันที่ออกบิล</th>
+                                  <th>ครบกำหนด</th>
+                                  <th>ค่าห้อง</th>
+                                  <th>ค่าน้ำ/ไฟ</th>
+                                  <th class="text-danger">ค่าปรับ/อื่นๆ</th>
+                                  <th class="fw-bold">ยอดรวม</th>
+                                  <th>สถานะ</th>
+                                  <th>จัดการ/แก้ไข</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {% if t.contract_set.all %}
+                                  {% for c in t.contract_set.all %}
+                                      {% for inv in c.invoice_set.all %}
+                                      <!-- แถวแสดงข้อมูลบิล -->
+                                      <tr>
+                                          <td class="fw-bold text-secondary">INV-{{ inv.id|stringformat:"04d" }}</td>
+                                          <td><span class="badge bg-secondary">{{ c.room.room_number }}</span></td>
+                                          <td>{{ inv.invoice_date|date:"d/m/Y" }}</td>
+                                          <td class="text-danger">{{ inv.due_date|date:"d/m/Y" }}</td>
+                                          <td>{{ inv.room_charge|floatformat:2 }}</td>
+                                          <td>{{ inv.water_charge|add:inv.electricity_charge|floatformat:2 }}</td>
+                                          <td class="text-danger">{{ inv.other_charge|floatformat:2 }}</td>
+                                          <td class="fw-bold text-primary fs-6">{{ inv.total_amount|floatformat:2 }}</td>
+                                          <td>
+                                              {% if inv.is_paid %}
+                                                  <span class="badge bg-success">ชำระแล้ว</span>
+                                              {% else %}
+                                                  <span class="badge bg-warning text-dark">ค้างชำระ</span>
+                                              {% endif %}
+                                          </td>
+                                          <td>
+                                              <button type="button" class="btn btn-sm btn-outline-warning text-dark py-0 px-2 fw-bold" 
+                                                      data-bs-toggle="collapse" data-bs-target="#editInvoiceForm-{{ inv.id }}" title="แก้ไขข้อมูลบิล / อัปเดตสถานะ">
+                                                  <i class="fas fa-edit"></i> แก้ไข
+                                              </button>
+                                          </td>
+                                      </tr>
+                                      
+                                      <!-- แถวฟอร์มสำหรับแก้ไขบิล (ซ่อนอยู่และจะเลื่อนลงมาเมื่อกดแก้ไข) -->
+                                      <tr class="collapse" id="editInvoiceForm-{{ inv.id }}">
+                                          <td colspan="10" class="p-0 border-0">
+                                              <div class="bg-warning bg-opacity-10 p-3 border-bottom border-warning-subtle shadow-inner">
+                                                  <form action="{% url 'invoice_edit' inv.id %}" method="POST" class="row g-2 align-items-end sweet-confirm" data-title="บันทึกการแก้ไขบิลนี้?" data-text="ยอดเรียกเก็บและสถานะบิลจะถูกปรับปรุงทันที" data-icon="question" data-confirm="ใช่, บันทึก">
+                                                      {% csrf_token %}
+                                                      <div class="col-md-2 text-start">
+                                                          <label class="small fw-bold text-dark mb-1">ปรับสถานะ</label>
+                                                          <select class="form-select form-select-sm border-warning" name="is_paid">
+                                                              <option value="False" {% if not inv.is_paid %}selected{% endif %}>ค้างชำระ (Unpaid)</option>
+                                                              <option value="True" {% if inv.is_paid %}selected{% endif %}>ชำระแล้ว (Paid)</option>
+                                                          </select>
+                                                      </div>
+                                                      <div class="col-md-2 text-start">
+                                                          <label class="small fw-bold text-dark mb-1">วันครบกำหนด</label>
+                                                          <input type="date" class="form-control form-control-sm" name="due_date" value="{{ inv.due_date|date:'Y-m-d' }}" required>
+                                                      </div>
+                                                      <div class="col-md-2 text-start">
+                                                          <label class="small fw-bold text-dark mb-1">ค่าห้อง (บาท)</label>
+                                                          <input type="number" step="0.01" class="form-control form-control-sm" name="room_charge" value="{{ inv.room_charge }}" required>
+                                                      </div>
+                                                      <div class="col-md-2 text-start">
+                                                          <label class="small fw-bold text-dark mb-1">ค่าน้ำ / ค่าไฟ</label>
+                                                          <div class="input-group input-group-sm">
+                                                              <input type="number" step="0.01" class="form-control" name="water_charge" value="{{ inv.water_charge }}" title="ค่าน้ำ" required>
+                                                              <input type="number" step="0.01" class="form-control" name="electricity_charge" value="{{ inv.electricity_charge }}" title="ค่าไฟ" required>
+                                                          </div>
+                                                      </div>
+                                                      <div class="col-md-2 text-start">
+                                                          <label class="small fw-bold text-danger mb-1">ค่าปรับ / อื่นๆ</label>
+                                                          <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle" name="other_charge" value="{{ inv.other_charge }}">
+                                                      </div>
+                                                      <div class="col-md-2 text-end">
+                                                          <button type="submit" class="btn btn-warning btn-sm fw-bold w-100 text-dark"><i class="fas fa-save me-1"></i> อัปเดตบิล</button>
+                                                      </div>
+                                                      
+                                                  </form>
+                                              </div>
+                                          </td>
+                                      </tr>
+                                      {% empty %}
+                                          {% if forloop.parentloop.last %}
+                                          <tr>
+                                              <td colspan="10" class="text-muted py-4">ยังไม่มีประวัติบิลค่าเช่าสำหรับลูกบ้านรายนี้</td>
+                                          </tr>
+                                          {% endif %}
+                                      {% endfor %}
+                                  {% endfor %}
+                              {% else %}
+                                  <tr>
+                                      <td colspan="10" class="text-muted py-4">ลูกบ้านรายนี้ยังไม่เคยทำสัญญาเช่ากับระบบ</td>
+                                  </tr>
+                              {% endif %}
+                          </tbody>
+                      </table>
+                        <div class="col-12 mt-3 text-end">
+                              <button type="button" class="btn btn-secondary btn-sm px-4 fw-bold" data-bs-dismiss="modal">ยกเลิก</button>
+                            </div>
+                  </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  <style>
+    .hover-shadow {
+      transition: all 0.2s ease-in-out;
+    }
+    .hover-shadow:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .w-15px {
+      width: 15px;
+    }
+    .input-group-text {
+      background-color: #f8f9fa;
+    }
+    .form-control:focus {
+      box-shadow: none;
+      border-color: #dee2e6;
+    }
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: transparent;
+        border-color: transparent transparent #0d6efd transparent;
+    }
+    .nav-tabs .nav-link.text-success.active {
+        color: #198754 !important;
+        border-color: transparent transparent #198754 transparent;
+    }
+    .shadow-inner {
+        box-shadow: inset 0 3px 5px rgba(0,0,0,0.05);
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const searchInput = document.getElementById('searchTenantInput')
+      const filterSelect = document.getElementById('filterTenant')
+    
+      const btnListView = document.getElementById('btnListView')
+      const btnGridView = document.getElementById('btnGridView')
+      const listViewContainer = document.getElementById('listViewContainer')
+      const gridViewContainer = document.getElementById('gridViewContainer')
+    
+      const noResultsMessage = document.getElementById('noResultsJsMessage')
+      const emptyDbMessage = document.getElementById('emptyDbMessage')
+    
+      const allItems = document.querySelectorAll('.tenant-item')
+    
+      function switchView(viewType) {
+        if (emptyDbMessage) return 
+    
+        if (viewType === 'grid') {
+          listViewContainer.style.display = 'none'
+          gridViewContainer.style.display = 'flex'
+          btnGridView.classList.add('active')
+          btnListView.classList.remove('active')
+        } else {
+          listViewContainer.style.display = 'block'
+          gridViewContainer.style.display = 'none'
+          btnListView.classList.add('active')
+          btnGridView.classList.remove('active')
+        }
+    
+        localStorage.setItem('tenantViewPreference', viewType)
+      }
+    
+      const savedView = localStorage.getItem('tenantViewPreference')
+      if (savedView === 'grid') {
+        switchView('grid')
+      }
+    
+      btnListView.addEventListener('click', () => switchView('list'))
+      btnGridView.addEventListener('click', () => switchView('grid'))
+    
+      function filterAndSearch() {
+        if (emptyDbMessage) return
+    
+        const searchTerm = searchInput.value.toLowerCase().trim()
+        const filterValue = filterSelect.value
+        let visibleCount = 0
+    
+        allItems.forEach((item) => {
+          let itemText = ''
+          const targets = item.querySelectorAll('.search-target')
+          if (targets.length > 0) {
+            targets.forEach((t) => (itemText += t.textContent.toLowerCase() + ' '))
+          } else {
+            itemText = item.textContent.toLowerCase()
+          }
+    
+          const matchesSearch = itemText.includes(searchTerm)
+          const itemEmailStatus = item.getAttribute('data-email')
+          let matchesFilter = true
+          if (filterValue === 'has_email' && itemEmailStatus !== 'yes') matchesFilter = false
+          if (filterValue === 'no_email' && itemEmailStatus !== 'no') matchesFilter = false
+    
+          if (matchesSearch && matchesFilter) {
+            item.style.display = ''
+            visibleCount++
+          } else {
+            item.style.display = 'none'
+          }
+        })
+    
+        if (visibleCount === 0) {
+          listViewContainer.classList.add('d-none')
+          gridViewContainer.classList.add('d-none')
+          noResultsMessage.style.display = 'block'
+        } else {
+          listViewContainer.classList.remove('d-none')
+          gridViewContainer.classList.remove('d-none')
+          noResultsMessage.style.display = 'none'
+        }
+      }
+    
+      if (searchInput) searchInput.addEventListener('input', filterAndSearch)
+      if (filterSelect) filterSelect.addEventListener('change', filterAndSearch)
+    })
+  </script>
+{% endblock %}

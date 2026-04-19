@@ -1,0 +1,272 @@
+{% extends 'base.html' %} 
+
+{% block page_title %}
+  ตั้งค่าอพาร์ทเมนต์ (System Configuration)
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-2">
+    
+    {# ข้อความแจ้งเตือนถูกแสดงเป็น Toast โดย base.html #}
+
+    <!-- ส่วนหัวของหน้า -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-gears me-2"></i>ตั้งค่าระบบ</h4>
+        <p class="text-muted small mb-0">จัดการข้อมูลพื้นฐาน อัตราค่าบริการ และข้อมูลการชำระเงินของหอพัก</p>
+      </div>
+      <div>
+        <button type="button" id="btnSaveConfig" form="configForm" class="btn btn-primary shadow-sm fw-bold">
+          <i class="fas fa-save me-2"></i> บันทึกการเปลี่ยนแปลง
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- คอลัมน์ซ้าย (ข้อมูลหลักของระบบ) -->
+      <div class="col-lg-8">
+        
+        <!-- ฟอร์มแก้ไขข้อมูลระบบ -->
+        <form id="configForm" method="POST" action="{% url 'config_update' %}">
+          {% csrf_token %}
+          
+          <!-- Card: ข้อมูลทั่วไป -->
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+              <h6 class="mb-0 fw-bold"><i class="fas fa-building text-primary me-2"></i>ข้อมูลทั่วไป (General Information)</h6>
+            </div>
+            <div class="card-body p-4">
+              <div class="row mb-3">
+                <div class="col-md-4">
+                  <label for="short_name" class="form-label small fw-bold">ชื่อย่อหอพัก <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="short_name" name="short_name" value="{{ system_info.short_name }}" required>
+                  <div class="form-text" style="font-size: 0.75rem;">แสดงบน Sidebar และเมนู (เช่น ARM)</div>
+                </div>
+                <div class="col-md-8">
+                  <label for="full_name" class="form-label small fw-bold">ชื่อเต็มหอพัก / อพาร์ทเมนต์ <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="full_name" name="full_name" value="{{ system_info.full_name }}" required>
+                  <div class="form-text" style="font-size: 0.75rem;">ใช้แสดงในหัวเอกสารใบแจ้งหนี้ / ใบเสร็จรับเงิน</div>
+                </div>
+              </div>
+              <div class="mb-0">
+                <label for="description" class="form-label small fw-bold">คำอธิบายระบบ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="description" name="description" value="{{ system_info.description }}" required>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card: ข้อมูลการติดต่อและที่อยู่ -->
+          <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+              <h6 class="mb-0 fw-bold"><i class="fas fa-map-marker-alt text-danger me-2"></i>ข้อมูลการติดต่อและที่อยู่ (Contact & Address)</h6>
+            </div>
+            <div class="card-body p-4">
+              <div class="mb-3">
+                <label for="address" class="form-label small fw-bold">ที่อยู่หอพัก</label>
+                <textarea class="form-control" id="address" name="address" rows="3">{{ system_info.address }}</textarea>
+                <div class="form-text" style="font-size: 0.75rem;">ที่อยู่สำหรับออกเอกสารสัญญาเช่าและใบเสร็จ/ใบแจ้งหนี้</div>
+              </div>
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label for="phone" class="form-label small fw-bold">เบอร์โทรศัพท์ (นิติบุคคล)</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light text-muted"><i class="fas fa-phone-alt"></i></span>
+                    <input type="text" class="form-control" id="phone" name="phone" value="{{ system_info.phone }}">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label for="email" class="form-label small fw-bold">อีเมล</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light text-muted"><i class="fas fa-envelope"></i></span>
+                    <input type="email" class="form-control" id="email" name="email" value="{{ system_info.email }}">
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="tax_id" class="form-label small fw-bold">เลขประจำตัวผู้เสียภาษี (Tax ID)</label>
+                  <input type="text" class="form-control" id="tax_id" name="tax_id" value="{{ system_info.tax_id }}">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </form>
+      </div>
+
+      <!-- คอลัมน์ขวา (ตั้งค่าค่าบริการ & การเงิน & รหัสผ่าน) -->
+      <div class="col-lg-4">
+        
+        <!-- Card: เปลี่ยนรหัสผ่าน Admin -->
+        <div class="card shadow-sm border border-danger-subtle mb-4">
+          <div class="card-header bg-danger-subtle text-danger border-bottom border-danger-subtle py-3">
+            <h6 class="mb-0 fw-bold"><i class="fas fa-user-shield me-2"></i>เปลี่ยนรหัสผ่านผู้ดูแลระบบ</h6>
+          </div>
+          <div class="card-body">
+            <form id="passwordForm" action="{% url 'admin_password_update' %}" method="POST">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label class="form-label small fw-bold text-dark">รหัสผ่านปัจจุบัน (Current) <span class="text-danger">*</span></label>
+                <input type="password" class="form-control form-control-sm" name="current_password" id="current_password" required placeholder="ใส่รหัสผ่านเดิมเพื่อยืนยัน">
+              </div>
+              <hr class="border-danger-subtle opacity-50 my-3">
+              <div class="mb-3">
+                <label class="form-label small fw-bold text-dark">รหัสผ่านใหม่ (New) <span class="text-danger">*</span></label>
+                <input type="password" class="form-control form-control-sm" name="new_password" id="new_password" required minlength="4" placeholder="ตั้งรหัสผ่านใหม่อย่างน้อย 4 ตัวอักษร">
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-bold text-dark">ยืนยันรหัสผ่านใหม่ (Confirm) <span class="text-danger">*</span></label>
+                <input type="password" class="form-control form-control-sm" name="confirm_password" id="confirm_password" required minlength="4" placeholder="พิมพ์รหัสผ่านใหม่อีกครั้ง">
+              </div>
+              <div class="text-end">
+                <button type="submit" class="btn btn-danger btn-sm fw-bold px-3"><i class="fas fa-key me-1"></i> อัปเดตรหัสผ่าน</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Card: อัตราค่าบริการ -->
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0 fw-bold"><i class="fa-solid fa-plug-circle-bolt text-warning me-2"></i>อัตราค่าบริการ (Utility Rates)</h6>
+          </div>
+          <div class="card-body bg-light">
+            <div class="mb-3">
+              <label class="form-label small fw-bold">ค่าน้ำประปา (บาท / หน่วย) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-white text-info"><i class="fa-solid fa-faucet-drip"></i></span>
+                <!-- ผูกฟอร์มกับ configForm ด้านซ้ายด้วย attribute form -->
+                <input type="number" step="0.01" class="form-control fw-bold" name="water_rate" form="configForm" value="{{ system_info.water_rate|floatformat:2 }}" required>
+                <span class="input-group-text">บาท</span>
+              </div>
+            </div>
+            <div class="mb-0">
+              <label class="form-label small fw-bold">ค่าไฟฟ้า (บาท / หน่วย) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-white text-warning"><i class="fa-solid fa-plug-circle-bolt"></i></span>
+                <input type="number" step="0.01" class="form-control fw-bold" name="electricity_rate" form="configForm" value="{{ system_info.electricity_rate|floatformat:2 }}" required>
+                <span class="input-group-text">บาท</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: ข้อมูลการชำระเงิน -->
+        <div class="card shadow-sm border-0 mb-4">
+          <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0 fw-bold"><i class="fa-solid fa-qrcode text-success me-2"></i>ข้อมูลชำระเงิน (Payment)</h6>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label small fw-bold">หมายเลขพร้อมเพย์ (PromptPay)</label>
+              <input type="text" class="form-control text-primary fw-bold" name="promptpay_no" form="configForm" value="{{ system_info.promptpay_no }}" placeholder="เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน">
+              <div class="form-text" style="font-size: 0.75rem;">ใช้สำหรับสร้าง QR Code ท้ายใบแจ้งหนี้อัตโนมัติ</div>
+            </div>
+            <div class="mb-0">
+              <label class="form-label small fw-bold">ชื่อบัญชีพร้อมเพย์</label>
+              <input type="text" class="form-control" name="promptpay_name" form="configForm" value="{{ system_info.promptpay_name }}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: ข้อมูลระบบ (Readonly) -->
+        <div class="card shadow-sm border-0 bg-transparent border border-secondary-subtle">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small fw-bold text-muted">เวอร์ชันระบบ:</span>
+              <span class="badge bg-secondary px-2">{{ system_info.system_version }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="small fw-bold text-muted">อัปเดตข้อมูลล่าสุด:</span>
+              <span class="small text-muted fw-semibold">{{ system_info.updated_at|date:"d M Y, H:i" }} น.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    
+    // 1. จัดการฟอร์มบันทึกการตั้งค่าระบบ (SweetAlert2 Confirm)
+    const btnSaveConfig = document.getElementById('btnSaveConfig');
+    const configForm = document.getElementById('configForm');
+
+    if (btnSaveConfig && configForm) {
+      btnSaveConfig.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // ตรวจสอบความถูกต้องของแบบฟอร์มเบื้องต้น (HTML5 Validation)
+        if (!configForm.checkValidity()) {
+          configForm.reportValidity();
+          return;
+        }
+
+        Swal.fire({
+          title: 'ยืนยันการบันทึกข้อมูล?',
+          text: "การเปลี่ยนแปลงการตั้งค่านี้จะมีผลกับทั้งระบบทันที",
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#0d6efd',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'บันทึกการเปลี่ยนแปลง',
+          cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            configForm.submit();
+          }
+        });
+      });
+    }
+
+    // 2. จัดการฟอร์มเปลี่ยนรหัสผ่านผู้ดูแลระบบ
+    const passwordForm = document.getElementById('passwordForm');
+    if (passwordForm) {
+      passwordForm.addEventListener('submit', function(e) {
+        e.preventDefault(); // ป้องกันการส่งฟอร์มทันที
+
+        const currentPwd = document.getElementById('current_password').value;
+        const newPwd = document.getElementById('new_password').value;
+        const confirmPwd = document.getElementById('confirm_password').value;
+
+        if (!currentPwd) {
+          Swal.fire('ข้อผิดพลาด', 'กรุณาระบุรหัสผ่านปัจจุบันก่อนทำรายการ', 'error');
+          return;
+        }
+
+        // ตรวจสอบรหัสผ่านว่าตรงกันหรือไม่
+        if (newPwd !== confirmPwd) {
+          Swal.fire({
+            icon: 'error',
+            title: 'ข้อผิดพลาด',
+            text: 'รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง'
+          });
+          return;
+        }
+
+        // ถ้ารหัสผ่านตรงกัน ให้ยืนยันอีกครั้งด้วย SweetAlert2
+        Swal.fire({
+          title: 'ยืนยันการเปลี่ยนรหัสผ่าน?',
+          text: "คุณจะต้องใช้รหัสผ่านใหม่ในการเข้าสู่ระบบครั้งต่อไป",
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#dc3545',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'ยืนยันเปลี่ยนรหัสผ่าน',
+          cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            passwordForm.submit();
+          }
+        });
+      });
+    }
+
+  });
+</script>
+{% endblock %}

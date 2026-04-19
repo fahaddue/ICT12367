@@ -1,0 +1,927 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+  ชำระเงิน - ARM System
+{% endblock %}
+{% block page_title %}
+  จัดการบิลและชำระเงิน
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-2">
+
+    <!-- ส่วนสรุปสถานะบิล (Quick Stats) -->
+    <div class="row g-3 mb-4">
+      <!-- บิลทั้งหมด -->
+      <div class="col-12 col-md-4">
+        <div class="card border-primary-subtle shadow-sm h-100 hover-shadow transition-all" style="cursor: pointer" onclick="filterByStatus('all')">
+          <div class="card-body p-3 d-flex align-items-center">
+            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+              <i class="fas fa-file-invoice fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted mb-1">บิลทั้งหมด</h6>
+              <h4 class="mb-0 fw-bold text-primary" id="countTotal">{{ count_total|default:'0' }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- รอชำระเงิน / รอยืนยัน -->
+      <div class="col-12 col-md-4">
+        <div class="card border-warning-subtle shadow-sm h-100 hover-shadow transition-all" style="cursor: pointer" onclick="filterByStatus('unpaid')">
+          <div class="card-body p-3 d-flex align-items-center">
+            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+              <i class="fas fa-exclamation-circle fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted mb-1">รอชำระเงิน / รอยืนยัน</h6>
+              <h4 class="mb-0 fw-bold text-warning" id="countUnpaid">{{ count_unpaid|default:'0' }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- ชำระแล้ว -->
+      <div class="col-12 col-md-4">
+        <div class="card border-success-subtle shadow-sm h-100 hover-shadow transition-all" style="cursor: pointer" onclick="filterByStatus('paid')">
+          <div class="card-body p-3 d-flex align-items-center">
+            <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex justify-content-center align-items-center me-3" style="width: 50px; height: 50px">
+              <i class="fas fa-check-circle fs-4"></i>
+            </div>
+            <div>
+              <h6 class="text-muted mb-1">ชำระแล้ว</h6>
+              <h4 class="mb-0 fw-bold text-success" id="countPaid">{{ count_paid|default:'0' }}</h4>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ส่วนตารางและตัวกรองข้อมูล -->
+    <div class="card border border-secondary-subtle shadow-sm mb-4">
+      <!-- ส่วนหัวและตัวกรอง (Filter & Search) -->
+      <div class="card-header bg-white p-3 border-bottom d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <h6 class="mb-0 fw-bold text-dark text-nowrap"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>รายการใบแจ้งหนี้ / บิลค่าเช่า</h6>
+
+        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center gap-2 w-100 justify-content-lg-end ms-lg-auto">
+          <!-- ช่องค้นหาห้อง -->
+          <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0" style="min-width: 200px;">
+            <span class="input-group-text bg-light text-secondary border-end-0"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchRoomInput" class="form-control border-start-0 ps-0" placeholder="ค้นหาจากเลขห้อง..." />
+            <button class="btn btn-outline-secondary border-start-0" type="button" id="clearSearchBtn" style="display: none" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+          </div>
+
+          <!-- Dropdown ตัวกรองสถานะ -->
+          <div class="input-group input-group-sm w-auto flex-grow-1 flex-lg-grow-0" style="min-width: 150px;">
+            <span class="input-group-text bg-light text-secondary"><i class="fas fa-filter"></i></span>
+            <select id="statusFilter" class="form-select">
+              <option value="all">แสดงทุกสถานะ</option>
+              <option value="unpaid">รอชำระเงิน</option>
+              <option value="wait">รอยืนยันสลิป</option>
+              <option value="rejected">สลิปถูกปฏิเสธ</option>
+              <option value="paid">ชำระแล้ว</option>
+            </select>
+          </div>
+
+            <div class="d-flex gap-2 ms-sm-2 mt-2 mt-sm-0">          
+            <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#bulkBillingModal" title="กรอกน้ำไฟหลายห้องพร้อมกัน">
+              <i class="fas fa-list-check me-1"></i> ออกบิลหลายห้อง
+            </button>
+          </div>
+
+          <!-- ปุ่มสลับมุมมอง (List/Grid) -->
+          <div class="btn-group btn-group-sm ms-sm-2" role="group" aria-label="View toggle">
+            <input type="radio" class="btn-check" name="viewOptions" id="viewListBtn" autocomplete="off" checked onchange="toggleView('list')" />
+            <label class="btn btn-outline-primary" for="viewListBtn" title="มุมมองแบบรายการ"><i class="fas fa-list"></i></label>
+
+            <input type="radio" class="btn-check" name="viewOptions" id="viewGridBtn" autocomplete="off" onchange="toggleView('grid')" />
+            <label class="btn btn-outline-primary" for="viewGridBtn" title="มุมมองแบบการ์ด"><i class="fas fa-th-large"></i></label>
+          </div>
+
+ 
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <!-- ข้อความแสดงเมื่อค้นหาไม่พบด้วย JS -->
+        <div class="text-center text-muted py-5" id="noResultsJsMessage" style="display: none;">
+          <i class="fas fa-search fs-1 text-secondary opacity-50 mb-3"></i><br />
+          <h5 class="text-secondary">ไม่พบบิลที่ตรงกับเงื่อนไขการค้นหา</h5>
+        </div>
+
+        <!-- คอนเทนเนอร์หลักสำหรับข้อมูล -->
+        <div id="dataContainer">
+          <!-- 1. มุมมองแบบตาราง (List View) -->
+          <div id="tableView" class="table-responsive">
+            <table class="table table-bordered table-striped table-hover align-middle mb-0 text-center text-md-start">
+              <thead class="table-dark text-white small">
+                <tr>
+                  <th scope="col" class="ps-md-4">เลขห้อง</th>
+                  <th scope="col">ชั้น</th>
+                  <th scope="col">ผู้เช่า</th>
+                  <th scope="col">ประเภทห้อง</th>
+                  <th scope="col">วันที่ออกบิล</th>
+                  <th scope="col">วันครบกำหนด</th>
+                  <th scope="col">ยอดชำระสุทธิ</th>
+                  <th scope="col" class="text-center">สถานะ</th>
+                  <th scope="col" class="text-center">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody class="small text-dark">
+                {% for invoice in invoices %}
+                  <tr class="invoice-item"
+                    data-room="{{ invoice.contract.room.room_number }}"
+                    data-status="{% if invoice.is_paid %}paid{% elif invoice.latest_payment and invoice.latest_payment.status == 'pending' %}wait{% elif invoice.latest_payment and invoice.latest_payment.status == 'rejected' %}rejected{% else %}unpaid{% endif %}"
+                    data-invoice-month="{{ invoice.invoice_date|date:'Y-m' }}"
+                    data-invoice-date="{{ invoice.invoice_date|date:'Y-m-d' }}">
+                    <td class="ps-md-4 fw-bold text-primary">{{ invoice.contract.room.room_number }}</td>
+                    <td class="ps-md-4 fw-bold text-primary">{{ invoice.contract.room.floor }}</td>
+                    <td>{{ invoice.contract.tenant.first_name }} {{ invoice.contract.tenant.last_name }}</td>
+                    <td class="ps-md-4">{{ invoice.contract.room.room_type.name }}</td>
+                    <td>{{ invoice.invoice_date|date:'d M Y' }}</td>
+                    <td>{{ invoice.due_date|date:'d M Y' }}</td>
+                    <td class="fw-bold text-danger">฿{{ invoice.total_amount|floatformat:2 }}</td>
+                    <td class="text-center">
+                      {% if invoice.is_paid %}
+                        <span class="badge bg-success px-3 py-2 rounded-1 w-100" style="max-width: 100px;">ชำระแล้ว</span>
+                      {% elif invoice.latest_payment and invoice.latest_payment.status == 'pending' %}
+                        <span class="badge bg-info text-dark px-3 py-2 rounded-1 w-100" style="max-width: 100px;">รอยืนยัน</span>
+                      {% elif invoice.latest_payment and invoice.latest_payment.status == 'rejected' %}
+                        <span class="badge bg-danger px-3 py-2 rounded-1 w-100" style="max-width: 100px;">สลิปถูกปฏิเสธ</span>
+                      {% else %}
+                        <span class="badge bg-warning text-dark px-3 py-2 rounded-1 w-100" style="max-width: 100px;">รอชำระเงิน</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-primary px-3" data-bs-toggle="modal" data-bs-target="#viewbill-{{ invoice.id }}"><i class="fas fa-search me-1"></i> จัดการ</button>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr class="empty-db-message">
+                    <td colspan="9" class="text-center text-muted py-5">
+                      <i class="fas fa-receipt fs-3 text-secondary opacity-50 mb-3"></i><br />
+                      <h5 class="text-secondary">ไม่พบข้อมูลบิลค่าเช่าในระบบ</h5>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 2. มุมมองแบบการ์ด (Grid View) -->
+          <div id="gridView" class="p-3 bg-light" style="display: none;">
+            <div class="row g-3">
+              {% for invoice in invoices %}
+                <div class="col-12 col-md-6 col-xl-4 invoice-item"
+                  data-room="{{ invoice.contract.room.room_number }}"
+                  data-status="{% if invoice.is_paid %}paid{% elif invoice.latest_payment and invoice.latest_payment.status == 'pending' %}wait{% elif invoice.latest_payment and invoice.latest_payment.status == 'rejected' %}rejected{% else %}unpaid{% endif %}"
+                  data-invoice-month="{{ invoice.invoice_date|date:'Y-m' }}"
+                  data-invoice-date="{{ invoice.invoice_date|date:'Y-m-d' }}">
+                  <div class="card h-100 border-0 shadow-sm border-start border-4
+                                {% if invoice.is_paid %}border-success{% elif invoice.latest_payment and invoice.latest_payment.status == 'pending' %}border-info{% elif invoice.latest_payment and invoice.latest_payment.status == 'rejected' %}border-danger{% else %}border-warning{% endif %}">
+                    <div class="card-body d-flex flex-column">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <h5 class="fw-bold text-primary mb-1"><i class="fas fa-door-closed me-1"></i>ห้อง {{ invoice.contract.room.room_number }}</h5>
+                          <small class="text-muted">
+                            <i class="fas fa-user me-1"></i>
+                            {{ invoice.contract.tenant.first_name }} {{ invoice.contract.tenant.last_name }}
+                          </small>
+                        </div>
+                        <div>
+                          {% if invoice.is_paid %}
+                            <span class="badge bg-success">ชำระแล้ว</span>
+                          {% elif invoice.latest_payment and invoice.latest_payment.status == 'pending' %}
+                            <span class="badge bg-info text-dark">รอยืนยัน (Wait)</span>
+                          {% elif invoice.latest_payment and invoice.latest_payment.status == 'rejected' %}
+                            <span class="badge bg-danger">ถูกปฏิเสธ</span>
+                          {% else %}
+                            <span class="badge bg-warning text-dark">รอชำระเงิน</span>
+                          {% endif %}
+                        </div>
+                      </div>
+
+                      <hr class="my-2 bg-secondary opacity-25" />
+
+                      <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="text-muted small">
+                          <div>
+                            <strong>ออกบิล:</strong> {{ invoice.invoice_date|date:'d M Y' }}
+                          </div>
+                          <div class="text-danger mt-1">
+                            <strong>ครบกำหนด:</strong> {{ invoice.due_date|date:'d M Y' }}
+                          </div>
+                        </div>
+                        <div class="text-end">
+                          <div class="small text-muted mb-1">ยอดชำระสุทธิ</div>
+                          <div class="fw-bold text-danger fs-5">฿{{ invoice.total_amount|floatformat:2 }}</div>
+                        </div>
+                      </div>
+
+                      <div class="mt-auto pt-2 d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1"></div>
+                        <button class="btn btn-sm btn-outline-primary px-3 rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#viewbill-{{ invoice.id }}"><i class="fas fa-search me-1"></i> จัดการบิล</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% empty %}
+                <div class="col-12 text-center text-muted py-5 empty-db-message"></div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      {% if invoices.has_other_pages %}
+        <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 py-2 px-3">
+          <small class="text-muted">แสดง {{ invoices.start_index }}–{{ invoices.end_index }} จาก {{ invoices.paginator.count }} รายการ</small>
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if not invoices.has_previous %}disabled{% endif %}">
+              <a class="page-link" href="?page={% if invoices.has_previous %}{{ invoices.previous_page_number }}{% else %}1{% endif %}">«</a>
+            </li>
+            {% for num in invoices.paginator.page_range %}
+              <li class="page-item {% if invoices.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+              </li>
+            {% endfor %}
+            <li class="page-item {% if not invoices.has_next %}disabled{% endif %}">
+              <a class="page-link" href="?page={% if invoices.has_next %}{{ invoices.next_page_number }}{% else %}{{ invoices.number }}{% endif %}">»</a>
+            </li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modal 2: สร้างบิลกลุ่ม (Bulk Billing) -->
+  <div class="modal fade" id="bulkBillingModal"  tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content border-0 shadow">
+        <div class="modal-header bg-primary text-white border-bottom-0">
+          <h5 class="modal-title fw-bold"><i class="fas fa-tasks me-2"></i>จดค่าน้ำ-ค่าไฟ และออกบิลหลายห้องพร้อมกัน</h5>
+        </div>
+        <form action="{% url 'invoice_bulk_add' %}" method="POST" id="bulkBillForm">
+          {% csrf_token %}
+          <div class="modal-body p-4">
+            
+            <div class="row mb-4 bg-light p-3 rounded-3 border">
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">วันที่ออกบิล <span class="text-danger">*</span></label>
+                <input type="date" class="form-control form-control-sm" name="invoice_date" readonly>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">วันครบกำหนดชำระ <span class="text-danger">*</span></label>
+                <input type="date" class="form-control form-control-sm" name="due_date" required>
+              </div>
+              <div class="col-md-4 d-flex align-items-end">
+                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> ระบุจำนวนหน่วย (Unit) ระบบจะคำนวณเงินให้อัตโนมัติ</small>
+              </div>
+            </div>
+
+            <div class="table-responsive border rounded" style="max-height: 50vh;">
+              <table class="table table-hover table-sm align-middle text-center mb-0">
+                <thead class="table-light position-sticky top-0 shadow-sm" style="z-index: 1;">
+                  <tr>
+                    <th style="width: 5%;"><input type="checkbox" class="form-check-input" id="checkAllBulk" checked onclick="toggleAllBulk(this)"></th>
+                    <th style="width: 10%;">ห้อง</th>
+                    <th style="width: 15%;">ผู้เช่า</th>
+                    <th style="width: 15%;">ค่าเช่า (บาท)</th>
+                    <th style="width: 15%;">ค่าน้ำ <br><small class="text-muted">(หน่วยละ {{ system_info.water_rate|floatformat:2 }}฿)</small></th>
+                    <th style="width: 15%;">ค่าไฟ <br><small class="text-muted">(หน่วยละ {{ system_info.electricity_rate|floatformat:2 }}฿)</small></th>
+                    <th style="width: 10%;">ค่าปรับ/อื่นๆ</th>
+                    <th style="width: 10%;">ยอดรวม</th>
+                  </tr>
+                </thead>
+                <tbody class="text-dark small">
+                  {% for contract in active_contracts %}
+                  <tr>
+                    <td>
+                      <input type="checkbox" class="form-check-input bulk-check" name="selected_contracts" value="{{ contract.id }}" checked>
+                    </td>
+                    <td class="fw-bold text-primary">{{ contract.room.room_number }}</td>
+                    <td class="text-truncate" style="max-width: 120px;" title="{{ contract.tenant.first_name }} {{ contract.tenant.last_name }}">
+                        {{ contract.tenant.first_name }}
+                    </td>
+                    <td>
+                      <div class="input-group input-group-sm">
+                        <input type="number" step="0.01" class="form-control text-end bulk-input" name="room_charge_{{ contract.id }}" id="room_charge_{{ contract.id }}" value="{{ contract.room.room_type.base_price }}" data-target="total_{{ contract.id }}" required>
+                      </div>
+                    </td>
+                    <!-- การคำนวณค่าน้ำด้วย Unit -->
+                    <td>
+                      <div class="input-group input-group-sm mb-1">
+                        <input type="number" step="0.01" class="form-control text-end calc-unit" data-rate="{{ system_info.water_rate }}" data-target-charge="water_charge_{{ contract.id }}" data-display-span="show_water_{{ contract.id }}" placeholder="หน่วย (Unit)" required>
+                      </div>
+                      <div class="text-end fw-bold text-primary" style="font-size: 0.75rem;">
+                        <span id="show_water_{{ contract.id }}">0.00</span> ฿
+                        <!-- ตัวแปรนี้จะถูกส่งไปหลังบ้าน -->
+                        <input type="hidden" name="water_charge_{{ contract.id }}" id="water_charge_{{ contract.id }}" value="0.00" class="bulk-input" data-target="total_{{ contract.id }}">
+                      </div>
+                    </td>
+                    <!-- การคำนวณค่าไฟด้วย Unit -->
+                    <td>
+                      <div class="input-group input-group-sm mb-1">
+                        <input type="number" step="0.01" class="form-control text-end calc-unit" data-rate="{{ system_info.electricity_rate }}" data-target-charge="elec_charge_{{ contract.id }}" data-display-span="show_elec_{{ contract.id }}" placeholder="หน่วย (Unit)" required>
+                      </div>
+                      <div class="text-end fw-bold text-primary" style="font-size: 0.75rem;">
+                        <span id="show_elec_{{ contract.id }}">0.00</span> ฿
+                        <!-- ตัวแปรนี้จะถูกส่งไปหลังบ้าน -->
+                        <input type="hidden" name="electricity_charge_{{ contract.id }}" id="elec_charge_{{ contract.id }}" value="0.00" class="bulk-input" data-target="total_{{ contract.id }}">
+                      </div>
+                    </td>
+                    <td>
+                      <input type="number" step="0.01" class="form-control form-control-sm text-end border-danger-subtle bulk-input" name="other_charge_{{ contract.id }}" id="other_charge_{{ contract.id }}" value="0.00" data-target="total_{{ contract.id }}">
+                    </td>
+                    <td class="fw-bold text-danger fs-6" id="total_{{ contract.id }}">{{ contract.room.room_type.base_price|floatformat:2 }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="8" class="text-muted py-4">
+                      <i class="fas fa-bed fs-3 opacity-25 mb-2"></i><br>ไม่มีสัญญาเช่าที่กำลังใช้งาน (Active) อยู่ในขณะนี้
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+          <div class="modal-footer bg-light border-top-0">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+            <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="fas fa-paper-plane me-1"></i> บันทึกและสร้างบิลที่เลือก</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Modal 3: จัดการและแก้ไขบิล (View & Edit) -->
+  {% for invoice in invoices %}
+    <div class="modal fade" id="viewbill-{{ invoice.id }}" tabindex="-1" aria-labelledby="modalLabel-{{ invoice.id }}" aria-hidden="true"
+         data-is-paid="{{ invoice.is_paid|lower }}"
+         data-invoice-date="{{ invoice.invoice_date|date:'Y-m-d' }}" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow-lg">
+          
+          <div class="modal-header bg-light border-bottom-0 py-3" data-bs-backdrop="static" data-bs-keyboard="false">
+            <h5 class="modal-title fw-bold text-dark" id="modalLabel-{{ invoice.id }}">
+              <i class="fas fa-file-invoice-dollar text-primary me-2"></i>จัดการบิล - ห้อง <span class="text-primary">{{ invoice.contract.room.room_number }}</span>
+            </h5>
+          </div>
+
+          <div class="modal-body p-4 p-md-5 bg-white">
+            <div class="row g-5">
+              
+              <!-- ฝั่งซ้าย: ข้อมูลใบแจ้งหนี้ และฟอร์มแก้ไข -->
+              <div class="col-lg-7 border-end-lg" id="invoice-pdf-{{ invoice.id }}">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="fw-bold text-dark mb-0"><i class="fas fa-list-ul text-secondary me-2"></i>สรุปรายการเรียกเก็บเงิน</h6>
+                  <div>
+                    <button class="btn btn-sm btn-outline-primary fw-bold me-2" type="button" data-bs-toggle="collapse" data-bs-target="#editInvoiceBox-{{ invoice.id }}" aria-expanded="false" title="แก้ไขตัวเลขค่าใช้จ่าย">
+                      <i class="fas fa-edit"></i> แก้ไขบิล
+                    </button>
+                    <span class="badge bg-light text-dark border border-secondary-subtle py-2">INV-{% now "Y" %}{{ invoice.id|stringformat:"04d" }}</span>
+                  </div>
+                </div>
+                
+                <!-- ส่วนฟอร์มแก้ไขบิล -->
+                <div class="collapse mb-4" id="editInvoiceBox-{{ invoice.id }}">
+                  <div class="card card-body bg-light border border-primary-subtle shadow-sm">
+                    <form action="{% url 'invoice_edit' invoice.id %}" method="POST" class="row g-2 align-items-end sweet-confirm" data-title="ยืนยันการแก้ไขข้อมูลบิลนี้?" data-text="ยอดเรียกเก็บและข้อมูลจะถูกปรับปรุงในระบบทันที" data-icon="question" data-confirm="ใช่, บันทึกเลย">
+                      {% csrf_token %}
+                      <div class="col-md-4 text-start">
+                        <label class="small fw-bold text-dark mb-1">วันครบกำหนด</label>
+                        <input type="date" class="form-control form-control-sm" name="due_date" value="{{ invoice.due_date|date:'Y-m-d' }}" required>
+                      </div>
+                      <div class="col-md-4 text-start">
+                        <label class="small fw-bold text-dark mb-1">ค่าห้อง (บาท)</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" name="room_charge" value="{{ invoice.room_charge }}" required>
+                      </div>
+                      <div class="col-md-4 text-start">
+                        <label class="small fw-bold text-dark mb-1">สถานะ</label>
+                        <select class="form-select form-select-sm" name="is_paid">
+                          <option value="False" {% if not invoice.is_paid %}selected{% endif %}>รอชำระเงิน</option>
+                          <option value="True" {% if invoice.is_paid %}selected{% endif %}>ชำระแล้ว</option>
+                        </select>
+                      </div>
+
+                      <!-- Edit ค่าน้ำแบบกรอก Unit ได้ -->
+                      <div class="col-md-4 text-start">
+                        <label class="small fw-bold text-dark mb-1">ค่าน้ำ (หน่วยละ {{ system_info.water_rate|floatformat:2 }})</label>
+                        <div class="input-group input-group-sm mb-1">
+                          <input type="number" step="0.01" class="form-control calc-unit text-primary bg-white" data-rate="{{ system_info.water_rate }}" data-target-charge="edit_water_charge_{{ invoice.id }}" placeholder="พิมพ์จำนวนหน่วย">
+                          <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">Unit</span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">฿</span>
+                          <input type="number" step="0.01" class="form-control text-end text-dark" name="water_charge" id="edit_water_charge_{{ invoice.id }}" value="{{ invoice.water_charge }}" required>
+                        </div>
+                      </div>
+
+                      <!-- Edit ค่าไฟแบบกรอก Unit ได้ -->
+                      <div class="col-md-4 text-start">
+                        <label class="small fw-bold text-dark mb-1">ค่าไฟฟ้า (หน่วยละ {{ system_info.electricity_rate|floatformat:2 }})</label>
+                        <div class="input-group input-group-sm mb-1">
+                          <input type="number" step="0.01" class="form-control calc-unit text-primary bg-white" data-rate="{{ system_info.electricity_rate }}" data-target-charge="edit_electricity_charge_{{ invoice.id }}" placeholder="พิมพ์จำนวนหน่วย">
+                          <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">Unit</span>
+                        </div>
+                        <div class="input-group input-group-sm">
+                          <span class="input-group-text bg-light text-secondary" style="font-size: 0.75rem;">฿</span>
+                          <input type="number" step="0.01" class="form-control text-end text-dark" name="electricity_charge" id="edit_electricity_charge_{{ invoice.id }}" value="{{ invoice.electricity_charge }}" required>
+                        </div>
+                      </div>
+                      
+                      <div class="col-md-4 text-start">
+                        <label class="small fw-bold text-danger mb-1">ค่าปรับ / อื่นๆ</label>
+                        <br>
+                        <input type="number" step="0.01" class="form-control form-control-sm border-danger-subtle mt-4" name="other_charge" value="{{ invoice.other_charge }}">
+                      </div>
+                      <div class="col-12 text-end mt-3">
+                        <button type="submit" class="btn btn-primary btn-sm fw-bold px-4"><i class="fas fa-save me-1"></i> บันทึกการแก้ไขบิล</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                <!-- ข้อมูลผู้เช่าและวันที่ -->
+                <div class="bg-light p-3 rounded-3 mb-4 small">
+                  <div class="row">
+                    <div class="col-sm-6 mb-2 mb-sm-0">
+                      <span class="text-muted d-block mb-1">ผู้เช่า (Billed To):</span>
+                      <span class="fw-bold text-dark fs-6">{{ invoice.contract.tenant.first_name }} {{ invoice.contract.tenant.last_name }}</span><br>
+                      <span class="text-muted"><i class="fas fa-phone-alt me-1 mt-1"></i> {{ invoice.contract.tenant.phone|default:"-" }}</span>
+                    </div>
+                    <div class="col-sm-6 text-sm-end">
+                      <div class="mb-1">
+                        <span class="text-muted me-2">วันที่ออกบิล:</span>
+                        <span class="fw-semibold text-dark">{{ invoice.invoice_date|date:'d M Y' }}</span>
+                      </div>
+                      <div>
+                        <span class="text-muted me-2">วันครบกำหนด:</span>
+                        <span class="fw-bold text-danger">{{ invoice.due_date|date:'d M Y' }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ตารางค่าใช้จ่าย -->
+                <div class="table-responsive">
+                  <table class="table table-bordered mb-0 small">
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col" class="text-center" style="width: 5%;">#</th>
+                        <th scope="col" style="width: 65%;">รายการ (Description)</th>
+                        <th scope="col" class="text-end" style="width: 30%;">จำนวนเงิน (Amount)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="text-center text-muted align-middle">1</td>
+                        <td>
+                          <span class="fw-bold">ค่าเช่าห้องพักรายเดือน</span><br>
+                          <span class="text-muted" style="font-size: 0.75rem;">(ประเภท: {{ invoice.contract.room.room_type.name }})</span>
+                        </td>
+                        <td class="text-end text-dark align-middle">{{ invoice.room_charge|default:"0.00" }}</td>
+                      </tr>
+                      <tr>
+                        <td class="text-center text-muted align-middle">2</td>
+                        <td>
+                          <span class="fw-bold">ค่าน้ำประปา</span>
+                        </td>
+                        <td class="text-end text-dark align-middle">{{ invoice.water_charge|default:"0.00" }}</td>
+                      </tr>
+                      <tr>
+                        <td class="text-center text-muted align-middle">3</td>
+                        <td>
+                          <span class="fw-bold">ค่าไฟฟ้า</span>
+                        </td>
+                        <td class="text-end text-dark align-middle">{{ invoice.electricity_charge|default:"0.00" }}</td>
+                      </tr>
+                      {% if invoice.other_charge and invoice.other_charge > 0 %}
+                      <tr>
+                        <td class="text-center text-muted align-middle">4</td>
+                        <td>
+                          <span class="fw-bold text-danger">ค่าบริการอื่นๆ / ค่าปรับ</span>
+                        </td>
+                        <td class="text-end text-danger fw-bold align-middle">{{ invoice.other_charge|default:"0.00" }}</td>
+                      </tr>
+                      {% endif %}
+                    </tbody>
+                    <tfoot class="table-group-divider">
+                      <tr>
+                        <th colspan="2" class="text-end align-middle py-3">ยอดรวมสุทธิ (Net Total)</th>
+                        <th class="text-end text-primary fs-5 fw-bold py-3">฿{{ invoice.total_amount|floatformat:2 }}</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+
+                  <button type="button" class="btn btn-outline-secondary shadow-sm mt-2 float-end" onclick="exportToPDF('invoice-pdf-{{ invoice.id }}', 'Invoice_Room_{{ invoice.contract.room.room_number }}.pdf')">
+    <i class="fas fa-print me-1"></i> พิมพ์ใบแจ้งหนี้
+</button>
+
+                </div>
+              </div>
+
+              <!-- ฝั่งขวา: หลักฐานการชำระเงิน (Payment Evidence) -->
+              <div class="col-lg-5">
+                <h6 class="fw-bold text-dark mb-3"><i class="fas fa-money-check-alt text-secondary me-2"></i>สถานะและการตรวจสอบ</h6>
+                
+                {% if not invoice.is_paid %}
+                  {% with latest_payment=invoice.latest_payment %}
+                  <div class="card shadow-sm mb-3 {% if latest_payment and latest_payment.status == 'pending' %}border-info-subtle{% elif latest_payment and latest_payment.status == 'rejected' %}border-danger-subtle{% else %}border-warning-subtle{% endif %}">
+                    
+                    {% if latest_payment and latest_payment.status == 'pending' %}
+                    <div class="card-header bg-info-subtle text-dark py-2 d-flex justify-content-between align-items-center">
+                      <span class="small fw-bold"><i class="fas fa-hourglass-half me-1"></i> รอยืนยันสลิป</span>
+                      <span class="badge bg-info text-dark">Wait / Pending</span>
+                    </div>
+                    {% elif latest_payment and latest_payment.status == 'rejected' %}
+                    <div class="card-header bg-danger-subtle text-danger py-2 d-flex justify-content-between align-items-center">
+                      <span class="small fw-bold"><i class="fas fa-times-circle me-1"></i> สลิปถูกปฏิเสธ</span>
+                      <span class="badge bg-danger">Rejected</span>
+                    </div>
+                    {% else %}
+                    <div class="card-header bg-warning-subtle text-dark py-2 d-flex justify-content-between align-items-center">
+                      <span class="small fw-bold"><i class="fas fa-clock me-1"></i> รอชำระเงิน</span>
+                      <span class="badge bg-warning text-dark">Unpaid</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="card-body text-center p-4">
+                      <!-- แสดงสลิปจริงจาก Payment -->
+                      <div class="bg-light border rounded d-flex justify-content-center align-items-center mx-auto mb-3 position-relative" style="min-height: 250px; width: 100%; overflow: hidden;">
+                        {% if latest_payment and latest_payment.slip_image_url %}
+                           <a href="{% if latest_payment.slip_image_url.url %}{{ latest_payment.slip_image_url.url }}{% else %}{{ latest_payment.slip_image_url }}{% endif %}" target="_blank">
+                              <img src="{% if latest_payment.slip_image_url.url %}{{ latest_payment.slip_image_url.url }}{% else %}{{ latest_payment.slip_image_url }}{% endif %}" class="img-fluid rounded" alt="Payment Slip" style="max-height: 250px; object-fit: contain; {% if latest_payment.status == 'rejected' %}opacity: 0.4; filter: grayscale(100%);{% endif %}">
+                           </a>
+                           {% if latest_payment.status == 'rejected' %}
+                               <div class="position-absolute top-50 start-50 translate-middle">
+                                   <span class="badge bg-danger fs-4 shadow border border-light py-2 px-3" style="transform: rotate(-15deg); display: inline-block;">REJECTED</span>
+                               </div>
+                           {% endif %}
+                        {% else %}
+                           <div class="text-center p-4">
+                              <i class="fas fa-image fs-1 text-secondary opacity-25 mb-2"></i>
+                              <p class="text-muted small mb-0">ยังไม่มีการแนบหลักฐานการโอนเงิน</p>
+                           </div>
+                        {% endif %}
+                      </div>
+                      
+                      {% if latest_payment %}
+                          {% if latest_payment.status == 'rejected' %}
+                          <div class="small text-start mb-3 bg-danger-subtle p-2 rounded border border-danger-subtle text-danger">
+                            <div class="fw-bold"><i class="fas fa-exclamation-triangle me-1"></i> ถูกปฏิเสธเมื่อ: {{ latest_payment.payment_date|date:"d/m/Y H:i" }}</div>
+                            <div>กรุณารอให้ลูกบ้านทำการอัปโหลดสลิปใหม่</div>
+                          </div>
+                          {% else %}
+                          <div class="small text-start mb-3 bg-light p-2 rounded border">
+                            <div class="mb-1"><strong>วันที่โอน:</strong> {{ latest_payment.payment_date|date:"d/m/Y H:i" }}</div>
+                            <div><strong>ยอดเงินที่แจ้ง:</strong> ฿{{ latest_payment.amount|floatformat:2 }}</div>
+                          </div>
+                          {% endif %}
+                      {% endif %}
+
+                      <div class="d-flex gap-2 justify-content-center mt-3">
+                        <form action="{% url 'invoice_update_status' invoice.id %}" method="POST" class="w-100 sweet-confirm" data-title="ปฏิเสธสลิปนี้?" data-text="สลิปจะถูกเก็บเป็นประวัติและรอให้ผู้เช่าส่งใหม่" data-icon="warning" data-confirm="ใช่, ปฏิเสธสลิป">
+                           {% csrf_token %}
+                           <input type="hidden" name="status" value="reject">
+                           <button type="submit" class="btn btn-outline-danger w-100 fw-bold" {% if not latest_payment or latest_payment.status == 'rejected' %}disabled{% endif %}><i class="fas fa-times me-1"></i> ปฏิเสธสลิป</button>
+                        </form>
+                        <form action="{% url 'invoice_update_status' invoice.id %}" method="POST" class="w-100 sweet-confirm" data-title="ยืนยันการชำระเงิน?" data-text="คุณตรวจสอบยอดเงินครบถ้วนและต้องการอนุมัติใช่หรือไม่" data-icon="success" data-confirm="ใช่, อนุมัติ">
+                           {% csrf_token %}
+                           <input type="hidden" name="status" value="approve">
+                           <button type="submit" class="btn btn-success w-100 fw-bold" {% if not latest_payment or latest_payment.status == 'rejected' %}disabled{% endif %}><i class="fas fa-check-circle me-1"></i> อนุมัติชำระเงิน</button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                  {% endwith %}
+
+                {% else %}
+                  <!-- สถานะ: ยืนยันการชำระเงินเรียบร้อยแล้ว -->
+                  <div class="card border-success-subtle shadow-sm h-100">
+                    <div class="card-header bg-success-subtle text-success py-2 d-flex justify-content-between align-items-center">
+                      <span class="small fw-bold"><i class="fas fa-check-circle me-1"></i> ชำระเงินเสร็จสิ้น</span>
+                      <span class="badge bg-success">Paid / Verified</span>
+                    </div>
+                    <div class="card-body text-center p-5 d-flex flex-column justify-content-center">
+                      <i class="fas fa-check-circle text-success mb-3" style="font-size: 5rem; opacity: 0.9;"></i>
+                      <h4 class="fw-bold text-dark mb-2">ยืนยันยอดเงินเรียบร้อย</h4>
+                      <hr class="w-50 mx-auto my-4 border-success opacity-25">
+                      
+                      <!-- ฟอร์มยกเลิกการชำระเงิน (กรณีแอดมินกดผิด) -->
+                      <form action="{% url 'invoice_update_status' invoice.id %}" method="POST" class="sweet-confirm" data-title="ยกเลิกสถานะชำระแล้ว?" data-text="บิลนี้จะกลับไปอยู่สถานะรอชำระเงิน และสลิปล่าสุดจะถูกเปลี่ยนกลับเป็น รอตรวจสอบ" data-icon="error" data-confirm="ยืนยันยกเลิก">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="reject">
+                        <button type="submit" class="btn btn-sm btn-outline-danger mt-2"><i class="fas fa-undo me-1"></i> ยกเลิกสถานะชำระแล้ว</button>
+                      </form>
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="modal-footer bg-light border-top-0 py-3 d-flex flex-column flex-sm-row justify-content-between">
+            <div class="mb-2 mb-sm-0 w-100 w-sm-auto text-center text-sm-start">
+            
+            </div>
+            
+            <div class="d-flex gap-2 w-100 w-sm-auto justify-content-center justify-content-sm-end">
+              {% if invoice.is_paid %}
+                <button type="button" class="btn btn-primary shadow-sm px-4"><i class="fas fa-receipt me-2"></i> พิมพ์ใบเสร็จรับเงิน</button>
+              {% endif %}
+              <button type="button" class="btn btn-secondary shadow-sm px-4" data-bs-dismiss="modal">ยกเลิก</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+  <style>
+    .hover-shadow:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    .transition-all {
+      transition: all 0.2s ease-in-out;
+    }
+    .w-15px {
+      width: 15px;
+      text-align: center;
+    }
+    .modal-content {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    @media (min-width: 992px) {
+      .border-end-lg {
+        border-right: 1px solid #dee2e6 !important;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block extra_js %}
+  <!-- SweetAlert2 และ sweet-confirm handler โหลดไว้ใน base.html แล้ว -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // --- Search & Filter Logic ---
+      const searchInput = document.getElementById('searchRoomInput')
+      const clearSearchBtn = document.getElementById('clearSearchBtn')
+      const statusFilter = document.getElementById('statusFilter')
+      const items = document.querySelectorAll('.invoice-item')
+      const noResultsJsMessage = document.getElementById('noResultsJsMessage')
+      const dataContainer = document.getElementById('dataContainer')
+      const emptyDbMessages = document.querySelectorAll('.empty-db-message')
+    
+      function filterCards() {
+        const isEmptyDb = emptyDbMessages.length > 0 && emptyDbMessages[0].style.display !== 'none'
+        if (isEmptyDb) return
+    
+        const searchTerm = searchInput.value.toLowerCase().trim()
+        const statusTerm = statusFilter.value
+        let visibleCount = 0
+    
+        if (searchTerm.length > 0) {
+          clearSearchBtn.style.display = 'block'
+        } else {
+          clearSearchBtn.style.display = 'none'
+        }
+    
+        items.forEach((item) => {
+          const roomNumber = (item.getAttribute('data-room') || '').toLowerCase()
+          const itemStatus = item.getAttribute('data-status')
+    
+          const matchesSearch = roomNumber.includes(searchTerm)
+          const matchesStatus = statusTerm === 'all' || itemStatus === statusTerm
+    
+          if (matchesSearch && matchesStatus) {
+            item.style.display = '' 
+            visibleCount++
+          } else {
+            item.style.display = 'none'
+          }
+        })
+    
+        if (visibleCount === 0 && items.length > 0) {
+          if (noResultsJsMessage) noResultsJsMessage.style.display = 'block'
+          if (dataContainer) dataContainer.style.display = 'none'
+        } else {
+          if (noResultsJsMessage) noResultsJsMessage.style.display = 'none'
+          if (dataContainer) dataContainer.style.display = 'block'
+        }
+      }
+    
+      if (searchInput) searchInput.addEventListener('input', filterCards)
+      if (statusFilter) statusFilter.addEventListener('change', filterCards)
+
+
+      // --- Auto Calculate Charges from Unit Inputs ---
+      document.querySelectorAll('.calc-unit').forEach(input => {
+        input.addEventListener('input', function() {
+          const rate = parseFloat(this.getAttribute('data-rate')) || 0;
+          const units = parseFloat(this.value) || 0;
+          const targetId = this.getAttribute('data-target-charge');
+          const displaySpanId = this.getAttribute('data-display-span');
+          
+          const totalCharge = units * rate;
+          const targetChargeInput = document.getElementById(targetId);
+
+          // Update hidden or text input
+          if (targetChargeInput) {
+            targetChargeInput.value = totalCharge.toFixed(2);
+            // Trigger input event to recalculate the row total automatically
+            targetChargeInput.dispatchEvent(new Event('input'));
+          }
+
+          // Update visible text span (if exist in Bulk billing table)
+          if (displaySpanId) {
+             const span = document.getElementById(displaySpanId);
+             if(span) span.textContent = totalCharge.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          }
+        });
+      });
+
+      // --- Bulk Billing Total Auto-calculate Logic ---
+      const bulkInputs = document.querySelectorAll('.bulk-input');
+      bulkInputs.forEach(input => {
+        input.addEventListener('input', function() {
+          const targetId = this.getAttribute('data-target');
+          const row = this.closest('tr');
+          
+          const roomCharge = parseFloat(row.querySelector('input[name^="room_charge"]').value) || 0;
+          const waterCharge = parseFloat(row.querySelector('input[name^="water_charge"]').value) || 0;
+          const electricCharge = parseFloat(row.querySelector('input[name^="electricity_charge"]').value) || 0;
+          const otherCharge = parseFloat(row.querySelector('input[name^="other_charge"]').value) || 0;
+          
+          const total = roomCharge + waterCharge + electricCharge + otherCharge;
+          const totalSpan = document.getElementById(targetId);
+          if (totalSpan) {
+            totalSpan.textContent = total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          }
+        });
+      });
+      
+      const todayObj = new Date();
+      todayObj.setHours(0, 0, 0, 0); 
+      const todayStrLocal = todayObj.getFullYear() + '-' + String(todayObj.getMonth() + 1).padStart(2, '0') + '-' + String(todayObj.getDate()).padStart(2, '0');
+      
+      const nextMonthObj = new Date(todayObj);
+      nextMonthObj.setMonth(nextMonthObj.getMonth() + 1);
+      const nextMonthStrLocal = nextMonthObj.getFullYear() + '-' + String(nextMonthObj.getMonth() + 1).padStart(2, '0') + '-' + String(nextMonthObj.getDate()).padStart(2, '0');
+
+      document.querySelectorAll('input[name="invoice_date"]').forEach(input => {
+        input.setAttribute('min', todayStrLocal);
+        input.setAttribute('max', nextMonthStrLocal);
+        if (!input.value) input.value = todayStrLocal;
+      });
+
+      // --- Bulk Bill Validation ---
+      const bulkBillForm = document.getElementById('bulkBillForm');
+      if (bulkBillForm) {
+        bulkBillForm.addEventListener('submit', function(e) {
+          const invDateVal = this.querySelector('input[name="invoice_date"]').value;
+          if (!invDateVal) return;
+
+          const selectedDate = new Date(invDateVal);
+          selectedDate.setHours(0, 0, 0, 0);
+
+          if (selectedDate < todayObj) {
+            e.preventDefault();
+            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถวางบิลย้อนหลังในอดีตได้', 'error');
+            return;
+          }
+          if (selectedDate > nextMonthObj) {
+            e.preventDefault();
+            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถวางบิลล่วงหน้าเกิน 1 เดือนได้', 'error');
+            return;
+          }
+
+          const invMonth = invDateVal.substring(0, 7);
+          const checkboxes = this.querySelectorAll('.bulk-check:checked');
+          let duplicateRooms = [];
+
+          checkboxes.forEach(cb => {
+            const tr = cb.closest('tr');
+            const roomNumber = tr.querySelector('td:nth-child(2)').textContent.trim();
+            const existingBills = document.querySelectorAll(`.invoice-item[data-room="${roomNumber}"][data-invoice-month="${invMonth}"]`);
+            if (existingBills.length > 0) {
+              duplicateRooms.push(roomNumber);
+            }
+          });
+
+          if (duplicateRooms.length > 0) {
+            e.preventDefault();
+            Swal.fire({
+              title: 'พบการวางบิลซ้ำ',
+              text: `ห้องต่อไปนี้มีการออกบิลในเดือนนี้ไปแล้ว: ${duplicateRooms.join(', ')}\n\nกรุณาเอาเครื่องหมายถูกด้านหน้าออกเพื่อดำเนินการต่อ`,
+              icon: 'warning'
+            });
+            return;
+          }
+
+          e.preventDefault();
+          Swal.fire({
+            title: 'ยืนยันการออกบิล',
+            text: 'ระบบจะสร้างบิลสำหรับห้องที่ถูกเลือกทั้งหมด คุณต้องการดำเนินการต่อหรือไม่?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันสร้างบิล',
+            cancelButtonText: 'ยกเลิก',
+            reverseButtons: true
+          }).then((result) => {
+            if (result.isConfirmed) bulkBillForm.submit();
+          });
+        });
+      }
+
+      // --- Penalty Calc ---
+      document.querySelectorAll('.modal[id^="viewbill-"]').forEach(modal => {
+        const isPaid = modal.getAttribute('data-is-paid') === 'true';
+        if (isPaid) return; 
+
+        const invDateStr = modal.getAttribute('data-invoice-date');
+        if (!invDateStr) return;
+
+        const invDate = new Date(invDateStr);
+        invDate.setHours(0, 0, 0, 0);
+
+        const diffTime = todayObj - invDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays > 5) {
+          const penaltyDays = diffDays - 5; 
+          const penaltyAmount = penaltyDays * 100;
+
+          const otherChargeInput = modal.querySelector('input[name="other_charge"]');
+          if (otherChargeInput) {
+            const currentCharge = parseFloat(otherChargeInput.value) || 0;
+            if (penaltyAmount > currentCharge) {
+              otherChargeInput.value = penaltyAmount.toFixed(2);
+              otherChargeInput.classList.add('border-danger', 'bg-danger-subtle', 'text-danger', 'fw-bold');
+              
+              const container = otherChargeInput.closest('div');
+              if (container) {
+                let warnBadge = container.querySelector('.penalty-warning');
+                if (!warnBadge) {
+                  warnBadge = document.createElement('div');
+                  warnBadge.className = 'text-danger small mt-1 penalty-warning fw-bold';
+                  container.appendChild(warnBadge);
+                }
+                warnBadge.innerHTML = `<i class="fas fa-exclamation-triangle"></i> เกินกำหนด ${diffDays} วัน (เพิ่มค่าปรับ ${penaltyAmount} ฿)`;
+              }
+            }
+          }
+        }
+      });
+
+    })
+
+    function toggleView(viewType) {
+      const tableView = document.getElementById('tableView')
+      const gridView = document.getElementById('gridView')
+    
+      if (viewType === 'grid') {
+        tableView.style.display = 'none'
+        gridView.style.display = 'block'
+      } else {
+        tableView.style.display = 'block'
+        gridView.style.display = 'none'
+      }
+    }
+    
+    function filterByStatus(status) {
+      const statusFilter = document.getElementById('statusFilter')
+      const searchInput = document.getElementById('searchRoomInput')
+    
+      if (statusFilter) statusFilter.value = status
+      if (searchInput) searchInput.value = '' 
+    
+      if (statusFilter) statusFilter.dispatchEvent(new Event('change'))
+    
+      const tableSection = document.getElementById('dataContainer')
+      if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    
+    function clearSearch() {
+      const searchInput = document.getElementById('searchRoomInput')
+      if (searchInput) {
+        searchInput.value = ''
+        searchInput.dispatchEvent(new Event('input'))
+      }
+    }
+    
+    function toggleAllBulk(source) {
+      const checkboxes = document.querySelectorAll('.bulk-check');
+      checkboxes.forEach(cb => cb.checked = source.checked);
+    }
+  </script>
+{% endblock %}
